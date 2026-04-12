@@ -85,6 +85,7 @@ export const customers = pgTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }),
+    authUserId: uuid("auth_user_id"),
     phone: varchar("phone", { length: 50 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -97,6 +98,8 @@ export const customers = pgTable(
   (table) => [
     index("customers_company_idx").on(table.companyId),
     index("customers_company_active_idx").on(table.companyId, table.isActive),
+    index("customers_auth_user_idx").on(table.authUserId),
+    uniqueIndex("customers_company_auth_user_idx").on(table.companyId, table.authUserId),
   ],
 );
 

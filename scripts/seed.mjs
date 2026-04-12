@@ -156,12 +156,53 @@ async function main() {
       do update set
         role = excluded.role
     `);
+
+    for (const authUser of authUsers) {
+      if (!authUser.email) {
+        continue;
+      }
+
+      const linkedCustomers = await sql.unsafe(
+        `
+          update public.customers
+          set auth_user_id = $1,
+              updated_at = now()
+          where company_id = $2
+            and lower(email) = lower($3)
+          returning id, name, email
+        `,
+        [authUser.id, companyId, authUser.email],
+      );
+
+      if (linkedCustomers.length === 0) {
+        continue;
+      }
+
+      await sql.unsafe(
+        `
+          insert into public.profiles (id, email, full_name, role)
+          values ($1, $2, $3, 'buyer')
+          on conflict (id) do nothing
+        `,
+        [authUser.id, authUser.email, linkedCustomers[0].name],
+      );
+
+      await sql.unsafe(
+        `
+          insert into public.company_users (company_id, user_id, role)
+          values ($1, $2, 'buyer')
+          on conflict (company_id, user_id) do nothing
+        `,
+        [companyId, authUser.id],
+      );
+    }
   }
 
   const summary = await sql.unsafe(`
     select
       (select count(*)::int from public.companies where slug = 'demo-wholesale') as companies,
       (select count(*)::int from public.customers where company_id = '${companyId}') as customers,
+      (select count(*)::int from public.customers where company_id = '${companyId}' and auth_user_id is not null) as linked_customers,
       (select count(*)::int from public.products where company_id = '${companyId}') as products,
       (select count(*)::int from public.orders where company_id = '${companyId}') as orders,
       (select count(*)::int from public.company_users where company_id = '${companyId}') as company_users

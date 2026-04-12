@@ -1,13 +1,14 @@
 "use server";
 
-import { and, eq, ilike, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAuthUser } from "@/lib/auth/session";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
-import { customers, orderItems, orders, products } from "@/lib/db/schema";
+import { orderItems, orders, products } from "@/lib/db/schema";
+import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 
 const placeOrderPayloadSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
@@ -49,29 +50,15 @@ export async function placePortalOrderAction(
       };
     }
 
-    if (!authUser.email) {
-      return {
-        success: false,
-        error: "Your account has no email address and cannot be mapped to a customer.",
-      };
-    }
-
-    const [customer] = await db
-      .select({ id: customers.id })
-      .from(customers)
-      .where(
-        and(
-          ilike(customers.email, authUser.email),
-          eq(customers.isActive, true),
-          eq(customers.companyId, context.company.id),
-        ),
-      )
-      .limit(1);
+    const customer = await getActivePortalCustomer(
+      context.company.id,
+      authUser.id,
+    );
 
     if (!customer) {
       return {
         success: false,
-        error: "No active customer profile matches your account email in this company.",
+        error: "No active customer profile is linked to your account in this company.",
       };
     }
 

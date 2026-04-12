@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { customers } from "@/lib/db/schema";
@@ -116,4 +116,41 @@ export async function setCustomerActive(
   });
 
   return customer;
+}
+
+export async function linkCustomerToAuthUser(
+  context: CompanyContext,
+  customerId: string,
+  authUserId: string,
+) {
+  return db.transaction(async (tx) => {
+    await tx
+      .update(customers)
+      .set({
+        authUserId: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(customers.companyId, context.company.id),
+          eq(customers.authUserId, authUserId),
+          ne(customers.id, customerId),
+        ),
+      );
+
+    const [customer] = await tx
+      .update(customers)
+      .set({
+        authUserId,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(customers.id, customerId), eq(customers.companyId, context.company.id)))
+      .returning();
+
+    if (!customer) {
+      throw new Error("Customer not found.");
+    }
+
+    return customer;
+  });
 }
