@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Package2, ShoppingCart, Users } from "lucide-react";
+import { KeyRound, Package2, ShoppingCart, Users } from "lucide-react";
 
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { LogoutButton } from "@/components/dashboard/logout-button";
@@ -38,6 +38,7 @@ export default async function DashboardLayout({
               <NavLink href="/dashboard/products" icon={Package2} label={nav.products} />
               <NavLink href="/dashboard/orders" icon={ShoppingCart} label={nav.orders} />
               <NavLink href="/dashboard/customers" icon={Users} label={nav.customers} />
+              <NavLink href="/account/password" icon={KeyRound} label={nav.password} />
             </nav>
             <LanguageSwitcher currentLocale={locale} />
             <LogoutButton />

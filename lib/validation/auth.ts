@@ -7,3 +7,25 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const passwordResetRequestSchema = z.object({
+  email: z.email("Please enter a valid email address."),
+  loginType: z.enum(["wholesaler", "buyer"]).default("wholesaler"),
+});
+
+export type PasswordResetRequestInput = z.infer<
+  typeof passwordResetRequestSchema
+>;
+
+export const passwordUpdateSchema = z
+  .object({
+    password: z.string().min(8, "Password must be at least 8 characters."),
+    confirmPassword: z.string().min(8, "Password must be at least 8 characters."),
+    loginType: z.enum(["wholesaler", "buyer"]).default("wholesaler"),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });
+
+export type PasswordUpdateInput = z.infer<typeof passwordUpdateSchema>;

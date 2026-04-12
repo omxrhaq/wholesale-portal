@@ -31,6 +31,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 ## App Routes
 
 - `/`
+- `/account/password`
 - `/dashboard`
 - `/dashboard/customers`
 - `/dashboard/customers/[id]/edit`
@@ -41,12 +42,15 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `/dashboard/products/[id]/edit`
 - `/dashboard/products/import`
 - `/dashboard/products/new`
+- `/forgot-password`
 - `/login`
 - `/portal`
 - `/portal/login`
+- `/reset-password`
 
 ## Route Handlers
 
+- `/auth/callback`
 - `/dashboard/products/import/template`
 - `/portal/logout`
 
