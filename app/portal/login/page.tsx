@@ -1,4 +1,5 @@
 import { ShoppingCart } from "lucide-react";
+import Link from "next/link";
 
 import { portalLoginAction } from "@/app/portal/login/actions";
 import { LoginForm } from "@/components/auth/login-form";
@@ -54,6 +55,13 @@ export default async function PortalLoginPage({
             ) : null}
 
             <LoginForm action={portalLoginAction} next={params.next} copy={t} />
+
+            <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
+              {t.switchToWholesalerPrompt}{" "}
+              <Link className="font-medium text-slate-950 underline-offset-4 hover:underline" href="/login">
+                {t.switchToWholesalerLink}
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

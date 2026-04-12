@@ -1,4 +1,5 @@
 import { Building2, KeyRound, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import { loginAction } from "@/app/login/actions";
 import { LoginForm } from "@/components/auth/login-form";
@@ -68,6 +69,13 @@ export default async function LoginPage({
               ) : null}
 
               <LoginForm action={loginAction} next={params.next} copy={t} />
+
+              <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
+                {t.switchToBuyerPrompt}{" "}
+                <Link className="font-medium text-slate-950 underline-offset-4 hover:underline" href="/portal/login">
+                  {t.switchToBuyerLink}
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </section>
