@@ -43,6 +43,13 @@
       "when": 1776114566443,
       "tag": "0005_absent_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776115667869,
+      "tag": "0006_auto_enable_rls_new_tables",
+      "breakpoints": true
     }
   ]
 }
