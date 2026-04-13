@@ -131,18 +131,16 @@ async function main() {
     const ownerUser = authUsers[0];
 
     await sql.unsafe(`
-      insert into public.profiles (id, email, full_name, role)
+      insert into public.profiles (id, email, full_name)
       values (
         '${ownerUser.id}',
         '${ownerUser.email}',
-        'Demo Owner',
-        'wholesaler_owner'
+        'Demo Owner'
       )
       on conflict (id)
       do update set
         email = excluded.email,
-        full_name = excluded.full_name,
-        role = excluded.role
+        full_name = excluded.full_name
     `);
 
     await sql.unsafe(`
@@ -180,8 +178,8 @@ async function main() {
 
       await sql.unsafe(
         `
-          insert into public.profiles (id, email, full_name, role)
-          values ($1, $2, $3, 'buyer')
+          insert into public.profiles (id, email, full_name)
+          values ($1, $2, $3)
           on conflict (id) do nothing
         `,
         [authUser.id, authUser.email, linkedCustomers[0].name],

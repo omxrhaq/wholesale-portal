@@ -68,6 +68,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0001_fast_bloodstrike.sql`
 - `0002_minor_rogue.sql`
 - `0003_broad_white_tiger.sql`
+- `0004_dizzy_meggan.sql`
 
 ## Environment
 
