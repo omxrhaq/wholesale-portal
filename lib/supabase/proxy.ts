@@ -37,6 +37,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = pathname === "/login" || isPortalLoginPage;
   const isProtectedPage =
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/account") ||
     (pathname.startsWith("/portal") && !isPortalLoginPage);
 
   if (!user && isProtectedPage) {

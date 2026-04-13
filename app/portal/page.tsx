@@ -1,11 +1,14 @@
+import { KeyRound } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BuyerPortalClient } from "@/components/portal/buyer-portal-client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuthUser } from "@/lib/auth/session";
-import { getPortalCopy } from "@/lib/i18n-copy";
+import { getPasswordCopy, getPortalCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
@@ -21,6 +24,7 @@ export default async function PortalPage() {
   const authUser = await requireAuthUser();
   const locale = await getUserLocale();
   const t = getPortalCopy(locale);
+  const passwordCopy = getPasswordCopy(locale);
   const products = await listProducts(context.company.id);
   const activeProducts = products.filter((product) => product.isActive);
   const matchedCustomer = await getActivePortalCustomer(
@@ -53,6 +57,12 @@ export default async function PortalPage() {
               </div>
               <div className="flex items-center gap-2">
                 <LanguageSwitcher currentLocale={locale} />
+                <Button asChild variant="outline" className="gap-2">
+                  <Link href="/account/password">
+                    <KeyRound className="size-4" />
+                    {passwordCopy.changePassword}
+                  </Link>
+                </Button>
                 <LogoutButton />
               </div>
             </div>

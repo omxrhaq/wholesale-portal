@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -8,21 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type LoginState = {
+type ForgotPasswordState = {
   error?: string;
+  success?: string;
 };
 
-type LoginFormProps = {
-  action: (state: LoginState, formData: FormData) => Promise<LoginState>;
-  next?: string;
+type ForgotPasswordFormProps = {
+  action: (
+    state: ForgotPasswordState,
+    formData: FormData,
+  ) => Promise<ForgotPasswordState>;
+  loginType: "wholesaler" | "buyer";
   copy: {
     email: string;
-    password: string;
-    submit: string;
-    submitting: string;
-    forgotPassword: string;
+    sendResetLink: string;
+    sendingResetLink: string;
   };
-  forgotPasswordHref: string;
 };
 
 function SubmitButton({
@@ -41,34 +41,20 @@ function SubmitButton({
   );
 }
 
-export function LoginForm({
+export function ForgotPasswordForm({
   action,
-  next,
+  loginType,
   copy,
-  forgotPasswordHref,
-}: LoginFormProps) {
+}: ForgotPasswordFormProps) {
   const [state, formAction] = useActionState(action, {});
 
   return (
     <form action={formAction} className="space-y-5">
-      <input type="hidden" name="next" value={next ?? ""} />
+      <input type="hidden" name="loginType" value={loginType} />
 
       <div className="space-y-2">
         <Label htmlFor="email">{copy.email}</Label>
         <Input id="email" name="email" type="email" placeholder="name@company.com" required />
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <Label htmlFor="password">{copy.password}</Label>
-          <Link
-            href={forgotPasswordHref}
-            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-slate-950 hover:underline"
-          >
-            {copy.forgotPassword}
-          </Link>
-        </div>
-        <Input id="password" name="password" type="password" required />
       </div>
 
       {state.error ? (
@@ -77,9 +63,15 @@ export function LoginForm({
         </p>
       ) : null}
 
+      {state.success ? (
+        <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {state.success}
+        </p>
+      ) : null}
+
       <SubmitButton
-        submitLabel={copy.submit}
-        submittingLabel={copy.submitting}
+        submitLabel={copy.sendResetLink}
+        submittingLabel={copy.sendingResetLink}
       />
     </form>
   );

@@ -12,7 +12,7 @@ import { getUserLocale } from "@/lib/i18n";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; error?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; status?: string }>;
 }) {
   const params = await searchParams;
   const isConfigured = hasSupabaseEnv();
@@ -68,7 +68,18 @@ export default async function LoginPage({
                 </div>
               ) : null}
 
-              <LoginForm action={loginAction} next={params.next} copy={t} />
+              {params.status === "password-updated" ? (
+                <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  {t.passwordUpdated}
+                </div>
+              ) : null}
+
+              <LoginForm
+                action={loginAction}
+                next={params.next}
+                copy={t}
+                forgotPasswordHref="/forgot-password?type=wholesaler"
+              />
 
               <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
                 {t.switchToBuyerPrompt}{" "}
