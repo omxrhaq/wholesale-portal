@@ -18,7 +18,9 @@ type PasswordUpdateFormProps = {
     formData: FormData,
   ) => Promise<PasswordUpdateState>;
   loginType?: "wholesaler" | "buyer";
+  requireCurrentPassword?: boolean;
   copy: {
+    currentPassword: string;
     newPassword: string;
     confirmPassword: string;
     updatePassword: string;
@@ -45,6 +47,7 @@ function SubmitButton({
 export function PasswordUpdateForm({
   action,
   loginType = "wholesaler",
+  requireCurrentPassword = false,
   copy,
 }: PasswordUpdateFormProps) {
   const [state, formAction] = useActionState(action, {});
@@ -52,6 +55,19 @@ export function PasswordUpdateForm({
   return (
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="loginType" value={loginType} />
+
+      {requireCurrentPassword ? (
+        <div className="space-y-2">
+          <Label htmlFor="currentPassword">{copy.currentPassword}</Label>
+          <Input
+            id="currentPassword"
+            name="currentPassword"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="password">{copy.newPassword}</Label>

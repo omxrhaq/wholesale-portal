@@ -34,6 +34,7 @@ export default async function AccountPasswordPage() {
             <PasswordUpdateForm
               action={changePasswordAction}
               loginType={isBuyer ? "buyer" : "wholesaler"}
+              requireCurrentPassword
               copy={t}
             />
             <Link
