@@ -15,6 +15,8 @@ type ProductSort =
   | "name_desc"
   | "sku_asc"
   | "sku_desc"
+  | "category_asc"
+  | "category_desc"
   | "price_asc"
   | "price_desc"
   | "unit_asc"
@@ -92,6 +94,12 @@ export default async function ProductsPage({
                     activeSort={selectedSort}
                   />
                   <SortableHeader
+                    label={t.category}
+                    params={params}
+                    sortKey="category"
+                    activeSort={selectedSort}
+                  />
+                  <SortableHeader
                     label={t.price}
                     params={params}
                     sortKey="price"
@@ -121,7 +129,7 @@ export default async function ProductsPage({
               <tbody className="divide-y divide-border/70">
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                    <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                       {t.noProducts}
                     </td>
                   </tr>
@@ -137,6 +145,9 @@ export default async function ProductsPage({
                         ) : null}
                       </td>
                       <td className="px-4 py-4 text-slate-700">{product.sku}</td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {product.categoryName ?? t.uncategorized}
+                      </td>
                       <td className="px-4 py-4 text-slate-700">{formatCurrency(product.price, locale)}</td>
                       <td className="px-4 py-4 text-slate-700">{product.unit}</td>
                       <td className="px-4 py-4">
@@ -188,7 +199,7 @@ function SortableHeader({
 }: {
   label: string;
   params: { status?: string; sort?: string };
-  sortKey: "name" | "sku" | "price" | "unit" | "status" | "updated";
+  sortKey: "name" | "sku" | "category" | "price" | "unit" | "status" | "updated";
   activeSort: ProductSort;
 }) {
   const isActive = activeSort.startsWith(`${sortKey}_`);
@@ -234,6 +245,8 @@ function isProductSort(value: string | undefined): value is ProductSort {
     "name_desc",
     "sku_asc",
     "sku_desc",
+    "category_asc",
+    "category_desc",
     "price_asc",
     "price_desc",
     "unit_asc",
@@ -246,7 +259,7 @@ function isProductSort(value: string | undefined): value is ProductSort {
 }
 
 function getNextSort(
-  sortKey: "name" | "sku" | "price" | "unit" | "status" | "updated",
+  sortKey: "name" | "sku" | "category" | "price" | "unit" | "status" | "updated",
   activeSort: ProductSort,
 ) {
   const desc = `${sortKey}_desc` as ProductSort;
@@ -262,6 +275,7 @@ function getNextSort(
 function sortProducts<T extends {
   name: string;
   sku: string;
+  categoryName: string | null;
   price: number;
   unit: string;
   isActive: boolean;
@@ -279,6 +293,10 @@ function sortProducts<T extends {
         return a.sku.localeCompare(b.sku, "en-US");
       case "sku_desc":
         return b.sku.localeCompare(a.sku, "en-US");
+      case "category_asc":
+        return (a.categoryName ?? "").localeCompare(b.categoryName ?? "", "en-US");
+      case "category_desc":
+        return (b.categoryName ?? "").localeCompare(a.categoryName ?? "", "en-US");
       case "price_asc":
         return a.price - b.price;
       case "price_desc":

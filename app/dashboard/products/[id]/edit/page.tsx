@@ -5,7 +5,7 @@ import { ProductForm } from "@/components/products/product-form";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { getCommonCopy, getProductCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
-import { getProductById } from "@/lib/services/product-service";
+import { getProductById, listProductCategories } from "@/lib/services/product-service";
 
 export default async function EditProductPage({
   params,
@@ -22,7 +22,10 @@ export default async function EditProductPage({
     ...getCommonCopy(locale),
     ...getProductCopy(locale),
   };
-  const product = await getProductById(context.company.id, id);
+  const [product, categories] = await Promise.all([
+    getProductById(context.company.id, id),
+    listProductCategories(context.company.id),
+  ]);
 
   if (!product) {
     notFound();
@@ -37,11 +40,13 @@ export default async function EditProductPage({
         initialValues={{
           name: product.name,
           sku: product.sku,
+          categoryName: product.categoryName ?? "",
           description: product.description ?? "",
           unit: product.unit,
           price: product.price,
           isActive: product.isActive,
         }}
+        categoryNames={categories.map((category) => category.name)}
         submitAction={action}
         copy={copy}
       />

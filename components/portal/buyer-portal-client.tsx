@@ -61,6 +61,7 @@ type BuyerPortalClientProps = {
     id: string;
     name: string;
     sku: string;
+    categoryName: string | null;
     description: string | null;
     unit: string;
     price: number;
@@ -101,24 +102,35 @@ export function BuyerPortalClient({
   const initialDraft = useMemo(() => getInitialPortalDraft(storageKey), [storageKey]);
   const [notes, setNotes] = useState(initialDraft.notes);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [quantities, setQuantities] = useState<Record<string, number>>(initialDraft.quantities);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const deferredSearch = useDeferredValue(search);
 
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(
+        products
+          .map((product) => product.categoryName)
+          .filter((categoryName): categoryName is string => Boolean(categoryName)),
+      ),
+    ).sort((a, b) => a.localeCompare(b, "en-US"));
+  }, [products]);
+
   const filteredProducts = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase();
 
-    if (!q) {
-      return products;
-    }
-
     return products.filter((product) => {
-      const haystack = `${product.name} ${product.sku} ${product.unit}`.toLowerCase();
-      return haystack.includes(q);
+      const matchesCategory =
+        selectedCategory === "all" || product.categoryName === selectedCategory;
+      const haystack =
+        `${product.name} ${product.sku} ${product.unit} ${product.categoryName ?? ""}`.toLowerCase();
+
+      return matchesCategory && (!q || haystack.includes(q));
     });
-  }, [deferredSearch, products]);
+  }, [deferredSearch, products, selectedCategory]);
 
   const cartItems = useMemo(() => {
     return products
@@ -265,11 +277,36 @@ export function BuyerPortalClient({
             className="h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
 
+          {categories.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={selectedCategory === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory("all")}
+              >
+                {copy.allCategories}
+              </Button>
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  type="button"
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="overflow-hidden rounded-2xl border border-border/70">
             <table className="min-w-full divide-y divide-border bg-white text-sm">
               <thead className="bg-slate-50/80 text-left text-slate-600">
                 <tr>
                   <th className="px-4 py-3 font-medium">{copy.productName}</th>
+                  <th className="px-4 py-3 font-medium">{copy.category}</th>
                   <th className="px-4 py-3 font-medium">{copy.price}</th>
                   <th className="px-4 py-3 font-medium">{copy.unit}</th>
                   <th className="px-4 py-3 font-medium">{copy.quantity}</th>
@@ -278,7 +315,7 @@ export function BuyerPortalClient({
               <tbody className="divide-y divide-border/70">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                       {copy.noProductsFound}
                     </td>
                   </tr>
@@ -287,6 +324,9 @@ export function BuyerPortalClient({
                     <tr key={product.id}>
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-950">{product.name}</div>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {product.categoryName ?? copy.uncategorized}
                       </td>
                       <td className="px-4 py-4 text-slate-700">
                         {formatCurrency(product.price, locale)}
