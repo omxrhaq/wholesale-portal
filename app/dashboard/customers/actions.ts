@@ -11,6 +11,7 @@ import { hasSupabaseServiceRoleKey } from "@/lib/env";
 import {
   createCustomer,
   getCustomerById,
+  linkCustomerToAuthUser,
   setCustomerActive,
   updateCustomer,
 } from "@/lib/services/customer-service";
@@ -171,6 +172,8 @@ export async function setupCustomerPortalLoginAction(
         role: "buyer",
       });
     }
+
+    await linkCustomerToAuthUser(context, customer.id, authUser.id);
 
     await logActivity({
       companyId: context.company.id,

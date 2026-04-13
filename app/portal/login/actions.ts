@@ -1,11 +1,12 @@
 "use server";
 
-import { and, eq, ilike } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { companyUsers, customers } from "@/lib/db/schema";
+import { companyUsers } from "@/lib/db/schema";
+import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 import { loginSchema } from "@/lib/validation/auth";
 
 type LoginState = {
@@ -52,6 +53,7 @@ export async function portalLoginAction(
 
   const [membership] = await db
     .select({
+      companyId: companyUsers.companyId,
       role: companyUsers.role,
     })
     .from(companyUsers)
@@ -69,18 +71,10 @@ export async function portalLoginAction(
   }
 
   if (membership.role === "buyer") {
-    const [activeCustomer] = await db
-      .select({ id: customers.id })
-      .from(customers)
-      .innerJoin(companyUsers, eq(companyUsers.companyId, customers.companyId))
-      .where(
-        and(
-          eq(companyUsers.userId, user.id),
-          eq(customers.isActive, true),
-          ilike(customers.email, user.email ?? ""),
-        ),
-      )
-      .limit(1);
+    const activeCustomer = await getActivePortalCustomer(
+      membership.companyId,
+      user.id,
+    );
 
     if (!activeCustomer) {
       await supabase.auth.signOut();

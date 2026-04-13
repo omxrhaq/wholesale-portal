@@ -1,4 +1,3 @@
-import { and, eq, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
@@ -9,8 +8,7 @@ import { requireAuthUser } from "@/lib/auth/session";
 import { getPortalCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
 import { requireCompanyContext } from "@/lib/companies/context";
-import { db } from "@/lib/db";
-import { customers } from "@/lib/db/schema";
+import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 import { getPortalOrderHistory } from "@/lib/services/portal-service";
 import { listProducts } from "@/lib/services/product-service";
 
@@ -25,24 +23,10 @@ export default async function PortalPage() {
   const t = getPortalCopy(locale);
   const products = await listProducts(context.company.id);
   const activeProducts = products.filter((product) => product.isActive);
-  const matchedCustomers = authUser.email
-    ? await db
-        .select({
-          id: customers.id,
-          name: customers.name,
-          email: customers.email,
-        })
-        .from(customers)
-        .where(
-          and(
-            eq(customers.companyId, context.company.id),
-            eq(customers.isActive, true),
-            ilike(customers.email, authUser.email),
-          ),
-        )
-        .limit(1)
-    : [];
-  const matchedCustomer = matchedCustomers[0] ?? null;
+  const matchedCustomer = await getActivePortalCustomer(
+    context.company.id,
+    authUser.id,
+  );
 
   if (!matchedCustomer && context.companyUser.role === "buyer") {
     redirect("/portal/logout?reason=inactive-buyer");
