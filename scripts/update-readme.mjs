@@ -144,6 +144,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - Orders overview with search, sortable columns, status views and order detail pages.
 - Buyer portal with authentication, catalog search, quantity inputs, cart, checkout, order notes, order history and reorder flow.
 - Language switcher for English, Dutch and French UI copy.
+- Database-level RLS policies for company isolation and buyer access control.
 
 ## Stack
 
@@ -163,6 +164,7 @@ ${formatList(routeHandlers)}
 - Drizzle config: \`drizzle.config.ts\`
 - Generated SQL migrations: \`drizzle/*.sql\`
 - Company scoping is handled with \`company_id\` across business tables.
+- RLS is enabled on public app tables with policies based on \`company_users\` roles and \`customers.auth_user_id\`.
 - Order items store product name and price snapshots at order time.
 
 ### Migrations
