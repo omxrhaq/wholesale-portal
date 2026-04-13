@@ -38,7 +38,6 @@ export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull(),
   fullName: varchar("full_name", { length: 255 }),
-  role: appRoleEnum("role").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

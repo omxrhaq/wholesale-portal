@@ -154,14 +154,12 @@ export async function setupCustomerPortalLoginAction(
         id: authUser.id,
         email: customer.email,
         fullName: customer.name,
-        role: currentRole ?? "buyer",
       })
       .onConflictDoUpdate({
         target: profiles.id,
         set: {
           email: customer.email,
           fullName: customer.name,
-          role: currentRole ?? "buyer",
         },
       });
 
@@ -184,7 +182,6 @@ export async function setupCustomerPortalLoginAction(
       metadata: {
         email: customer.email,
         authUserId: authUser.id,
-        role: currentRole ?? "buyer",
       },
     });
 
