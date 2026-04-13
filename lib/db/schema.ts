@@ -156,6 +156,54 @@ export const customers = pgTable(
   ],
 ).enableRLS();
 
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("product_categories_company_normalized_idx").on(
+      table.companyId,
+      table.normalizedName,
+    ),
+    index("product_categories_company_name_idx").on(table.companyId, table.name),
+    pgPolicy("product_categories_select_company_members", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and (
+            cu.role in ('wholesaler_owner', 'wholesaler_staff')
+            or (
+              cu.role = 'buyer'
+              and exists (
+                select 1
+                from customers c
+                where c.company_id = ${table.companyId}
+                  and c.auth_user_id = (select auth.uid())
+                  and c.is_active is true
+              )
+            )
+          )
+      )`,
+    }),
+  ],
+).enableRLS();
+
 export const products = pgTable(
   "products",
   {
@@ -163,6 +211,9 @@ export const products = pgTable(
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id").references(() => productCategories.id, {
+      onDelete: "set null",
+    }),
     name: varchar("name", { length: 255 }).notNull(),
     sku: varchar("sku", { length: 120 }).notNull(),
     description: text("description"),

@@ -19,6 +19,7 @@ import type { getProductImportCopy, getProductCopy } from "@/lib/i18n-copy";
 type HeaderMapping = {
   name: string;
   sku: string;
+  categoryName: string;
   description: string;
   unit: string;
   price: string;
@@ -45,6 +46,8 @@ type PreviewSort =
   | "name_desc"
   | "sku_asc"
   | "sku_desc"
+  | "category_asc"
+  | "category_desc"
   | "unit_asc"
   | "unit_desc"
   | "price_asc"
@@ -55,6 +58,7 @@ type PreviewSort =
 const fieldOptions = [
   { key: "name", required: true },
   { key: "sku", required: true },
+  { key: "categoryName", required: false },
   { key: "description", required: false },
   { key: "unit", required: true },
   { key: "price", required: true },
@@ -64,6 +68,7 @@ const fieldOptions = [
 const headerAliases: Record<keyof HeaderMapping, string[]> = {
   name: ["name", "naam", "product", "productnaam", "product name"],
   sku: ["sku", "artikelcode", "code", "productcode", "item code"],
+  categoryName: ["category", "categorie", "catégorie", "product category"],
   description: ["description", "beschrijving", "omschrijving"],
   unit: ["unit", "eenheid", "uom"],
   price: ["price", "prijs", "unit price", "verkoopprijs"],
@@ -74,7 +79,7 @@ type ProductImportFormProps = {
   copy: ReturnType<typeof getProductImportCopy> &
     Pick<
       ReturnType<typeof getProductCopy>,
-      "name" | "sku" | "description" | "unit" | "price"
+      "name" | "sku" | "category" | "description" | "unit" | "price"
     >;
 };
 
@@ -310,6 +315,12 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
                           onSortChange={setPreviewSort}
                         />
                         <PreviewHeader
+                          label={copy.category}
+                          sortKey="category"
+                          activeSort={previewSort}
+                          onSortChange={setPreviewSort}
+                        />
+                        <PreviewHeader
                           label={copy.unit}
                           sortKey="unit"
                           activeSort={previewSort}
@@ -335,6 +346,7 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
                           <td className="px-4 py-3">{row.sourceRowNumber}</td>
                           <td className="px-4 py-3">{row.name}</td>
                           <td className="px-4 py-3">{row.sku}</td>
+                          <td className="px-4 py-3">{row.categoryName}</td>
                           <td className="px-4 py-3">{row.unit}</td>
                           <td className="px-4 py-3">{row.price}</td>
                           <td className="px-4 py-3">
@@ -402,7 +414,7 @@ function PreviewHeader({
   onSortChange,
 }: {
   label: string;
-  sortKey: "row" | "name" | "sku" | "unit" | "price" | "active";
+  sortKey: "row" | "name" | "sku" | "category" | "unit" | "price" | "active";
   activeSort: PreviewSort;
   onSortChange: (value: PreviewSort) => void;
 }) {
@@ -431,6 +443,7 @@ function getFieldLabel(
   const labels: Record<(typeof fieldOptions)[number]["key"], string> = {
     name: copy.name,
     sku: copy.sku,
+    categoryName: copy.category,
     description: copy.description,
     unit: copy.unit,
     price: copy.price,
@@ -448,7 +461,7 @@ function formatTemplate(template: string, values: Record<string, string>) {
 }
 
 function getNextPreviewSort(
-  sortKey: "row" | "name" | "sku" | "unit" | "price" | "active",
+  sortKey: "row" | "name" | "sku" | "category" | "unit" | "price" | "active",
   activeSort: PreviewSort,
 ) {
   const desc = `${sortKey}_desc` as PreviewSort;
@@ -478,6 +491,10 @@ function sortPreviewRows(rows: ImportedProductRowInput[], sort: PreviewSort) {
         return a.sku.localeCompare(b.sku, "en-US");
       case "sku_desc":
         return b.sku.localeCompare(a.sku, "en-US");
+      case "category_asc":
+        return (a.categoryName ?? "").localeCompare(b.categoryName ?? "", "en-US");
+      case "category_desc":
+        return (b.categoryName ?? "").localeCompare(a.categoryName ?? "", "en-US");
       case "unit_asc":
         return a.unit.localeCompare(b.unit, "en-US");
       case "unit_desc":
@@ -511,6 +528,7 @@ function getDefaultMapping(headers: string[]): HeaderMapping {
   return {
     name: findMatchingHeader(headers, headerAliases.name),
     sku: findMatchingHeader(headers, headerAliases.sku),
+    categoryName: findMatchingHeader(headers, headerAliases.categoryName),
     description: findMatchingHeader(headers, headerAliases.description),
     unit: findMatchingHeader(headers, headerAliases.unit),
     price: findMatchingHeader(headers, headerAliases.price),
@@ -547,6 +565,7 @@ function buildImportRows(
       sourceRowNumber: index + 2,
       name: getValue(mapping.name),
       sku: getValue(mapping.sku),
+      categoryName: getValue(mapping.categoryName),
       description: getValue(mapping.description),
       unit: getValue(mapping.unit),
       price: parseLocalizedNumber(getValue(mapping.price)),

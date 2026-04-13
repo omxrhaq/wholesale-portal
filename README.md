@@ -5,11 +5,11 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 ## Current MVP
 
 - Wholesaler dashboard with protected login and company-scoped data.
-- Product management with create, edit, deactivate and list views.
-- Excel product import with downloadable template, validation, duplicate handling and import history.
+- Product management with create, edit, deactivate, category assignment and list views.
+- Excel product import with downloadable template, category mapping, validation, duplicate handling and import history.
 - Customer management with create, edit, deactivate and buyer portal access setup.
 - Orders overview with search, sortable columns, status views and order detail pages.
-- Buyer portal with authentication, catalog search, quantity inputs, cart, checkout, order notes, order history and reorder flow.
+- Buyer portal with authentication, category filters, catalog search, quantity inputs, cart, checkout, order notes, order history and reorder flow.
 - Language switcher for English, Dutch and French UI copy.
 - Database-level RLS policies plus automatic RLS enabling for new public tables.
 
@@ -74,6 +74,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0004_dizzy_meggan.sql`
 - `0005_absent_red_ghost.sql`
 - `0006_auto_enable_rls_new_tables.sql`
+- `0007_product_categories.sql`
 
 ## Environment
 

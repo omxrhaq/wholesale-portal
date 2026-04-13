@@ -50,6 +50,13 @@
       "when": 1776115667869,
       "tag": "0006_auto_enable_rls_new_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776116754328,
+      "tag": "0007_product_categories",
+      "breakpoints": true
     }
   ]
 }

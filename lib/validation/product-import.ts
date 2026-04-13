@@ -4,6 +4,7 @@ export const importedProductRowSchema = z.object({
   sourceRowNumber: z.number().int().positive(),
   name: z.string().trim().min(2, "Name is required."),
   sku: z.string().trim().min(1, "SKU is required."),
+  categoryName: z.string().trim().max(120, "Category is too long.").optional(),
   description: z.string().trim().optional(),
   unit: z.string().trim().min(1, "Unit is required."),
   price: z.number().positive("Price must be greater than 0."),

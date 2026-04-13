@@ -18,11 +18,11 @@ async function main() {
     select table_name
     from information_schema.tables
     where table_schema = 'public'
-      and table_name in ('companies', 'customers', 'products')
+      and table_name in ('companies', 'customers', 'product_categories', 'products')
     order by table_name
   `);
 
-  if (tableCheck.length < 3) {
+  if (tableCheck.length < 4) {
     throw new Error(
       "Required tables are missing. Run the migrations first with `npm run db:migrate`.",
     );
@@ -57,15 +57,30 @@ async function main() {
   `);
 
   await sql.unsafe(`
-    insert into public.products (company_id, name, sku, description, unit, price, is_active)
+    insert into public.product_categories (company_id, name, normalized_name)
     values
-      ('${companyId}', 'Arabica Koffiebonen 1kg', 'COF-ARAB-1KG', 'Volle arabica blend voor horeca en kantoor.', 'zak', 18.50, true),
-      ('${companyId}', 'Haverdrink Barista 1L', 'OAT-BAR-1L', 'Schuimt stabiel voor koffievarianten.', 'doos', 2.95, true),
-      ('${companyId}', 'Brownie Mix 2.5kg', 'BRN-MIX-25', 'Gebruiksklare mix voor snelle dessertproductie.', 'emmer', 14.20, true),
-      ('${companyId}', 'Suikersticks 1000 stuks', 'SUG-STK-1000', 'Bulkverpakking voor koffiecorners en take-away.', 'karton', 21.00, true),
-      ('${companyId}', 'Seizoensconfituur 24x30g', 'JAM-SEAS-24', 'Portieverpakking voor ontbijt en hotelservice.', 'tray', 11.80, false)
+      ('${companyId}', 'Coffee', 'coffee'),
+      ('${companyId}', 'Drinks', 'drinks'),
+      ('${companyId}', 'Bakery', 'bakery'),
+      ('${companyId}', 'Supplies', 'supplies'),
+      ('${companyId}', 'Spreads', 'spreads')
+    on conflict (company_id, normalized_name)
+    do update set
+      name = excluded.name,
+      updated_at = now()
+  `);
+
+  await sql.unsafe(`
+    insert into public.products (company_id, category_id, name, sku, description, unit, price, is_active)
+    values
+      ('${companyId}', (select id from public.product_categories where company_id = '${companyId}' and normalized_name = 'coffee'), 'Arabica Koffiebonen 1kg', 'COF-ARAB-1KG', 'Volle arabica blend voor horeca en kantoor.', 'zak', 18.50, true),
+      ('${companyId}', (select id from public.product_categories where company_id = '${companyId}' and normalized_name = 'drinks'), 'Haverdrink Barista 1L', 'OAT-BAR-1L', 'Schuimt stabiel voor koffievarianten.', 'doos', 2.95, true),
+      ('${companyId}', (select id from public.product_categories where company_id = '${companyId}' and normalized_name = 'bakery'), 'Brownie Mix 2.5kg', 'BRN-MIX-25', 'Gebruiksklare mix voor snelle dessertproductie.', 'emmer', 14.20, true),
+      ('${companyId}', (select id from public.product_categories where company_id = '${companyId}' and normalized_name = 'supplies'), 'Suikersticks 1000 stuks', 'SUG-STK-1000', 'Bulkverpakking voor koffiecorners en take-away.', 'karton', 21.00, true),
+      ('${companyId}', (select id from public.product_categories where company_id = '${companyId}' and normalized_name = 'spreads'), 'Seizoensconfituur 24x30g', 'JAM-SEAS-24', 'Portieverpakking voor ontbijt en hotelservice.', 'tray', 11.80, false)
     on conflict (company_id, sku)
     do update set
+      category_id = excluded.category_id,
       name = excluded.name,
       description = excluded.description,
       unit = excluded.unit,
@@ -167,12 +182,33 @@ async function main() {
               updated_at = now()
           where company_id = $2
             and lower(email) = lower($3)
+            and (auth_user_id is null or auth_user_id = $1)
+            and not exists (
+              select 1
+              from public.customers existing
+              where existing.company_id = $2
+                and existing.auth_user_id = $1
+                and existing.id <> public.customers.id
+            )
           returning id, name, email
         `,
         [authUser.id, companyId, authUser.email],
       );
 
-      if (linkedCustomers.length === 0) {
+      const customerMatches = linkedCustomers.length > 0
+        ? linkedCustomers
+        : await sql.unsafe(
+            `
+              select id, name, email
+              from public.customers
+              where company_id = $1
+                and auth_user_id = $2
+              limit 1
+            `,
+            [companyId, authUser.id],
+          );
+
+      if (customerMatches.length === 0) {
         continue;
       }
 
@@ -182,7 +218,7 @@ async function main() {
           values ($1, $2, $3)
           on conflict (id) do nothing
         `,
-        [authUser.id, authUser.email, linkedCustomers[0].name],
+        [authUser.id, authUser.email, customerMatches[0].name],
       );
 
       await sql.unsafe(
@@ -201,6 +237,7 @@ async function main() {
       (select count(*)::int from public.companies where slug = 'demo-wholesale') as companies,
       (select count(*)::int from public.customers where company_id = '${companyId}') as customers,
       (select count(*)::int from public.customers where company_id = '${companyId}' and auth_user_id is not null) as linked_customers,
+      (select count(*)::int from public.product_categories where company_id = '${companyId}') as product_categories,
       (select count(*)::int from public.products where company_id = '${companyId}') as products,
       (select count(*)::int from public.orders where company_id = '${companyId}') as orders,
       (select count(*)::int from public.company_users where company_id = '${companyId}') as company_users

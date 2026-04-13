@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
 import { imports, products } from "@/lib/db/schema";
+import { resolveProductCategoryId } from "@/lib/services/product-service";
 import { productImportPayloadSchema } from "@/lib/validation/product-import";
 
 type ProductImportActionResult = {
@@ -38,6 +39,7 @@ export async function importProductsAction(
     const parsed = productImportPayloadSchema.parse(payload);
     const warnings: string[] = [];
     const seenSkus = new Set<string>();
+    const categoryCache = new Map<string, string | null>();
 
     const [importJob] = await db
       .insert(imports)
@@ -79,11 +81,17 @@ export async function importProductsAction(
       seenSkus.add(normalizedSku);
 
       const existing = existingBySku.get(normalizedSku);
+      const categoryId = await getCachedCategoryId(
+        context.company.id,
+        row.categoryName,
+        categoryCache,
+      );
 
       if (existing) {
         await db
           .update(products)
           .set({
+            categoryId,
             name: row.name,
             sku: row.sku,
             description: row.description || null,
@@ -106,6 +114,7 @@ export async function importProductsAction(
 
       await db.insert(products).values({
         companyId: context.company.id,
+        categoryId,
         name: row.name,
         sku: row.sku,
         description: row.description || null,
@@ -202,6 +211,8 @@ function formatFieldLabel(fieldName: string) {
       return "Name";
     case "sku":
       return "SKU";
+    case "categoryName":
+      return "Category";
     case "unit":
       return "Unit";
     case "price":
@@ -213,4 +224,27 @@ function formatFieldLabel(fieldName: string) {
     default:
       return fieldName;
   }
+}
+
+async function getCachedCategoryId(
+  companyId: string,
+  categoryName: string | undefined,
+  cache: Map<string, string | null>,
+) {
+  const normalizedName = categoryName?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+
+  if (!normalizedName) {
+    return null;
+  }
+
+  const existing = cache.get(normalizedName);
+
+  if (cache.has(normalizedName)) {
+    return existing ?? null;
+  }
+
+  const categoryId = await resolveProductCategoryId(companyId, categoryName);
+  cache.set(normalizedName, categoryId);
+
+  return categoryId;
 }

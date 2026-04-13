@@ -7,6 +7,7 @@ export async function GET() {
   worksheet.columns = [
     { header: "Name", key: "name", width: 28 },
     { header: "SKU", key: "sku", width: 20 },
+    { header: "Category", key: "categoryName", width: 22 },
     { header: "Description", key: "description", width: 42 },
     { header: "Unit", key: "unit", width: 16 },
     { header: "Price", key: "price", width: 14 },
@@ -24,6 +25,7 @@ export async function GET() {
     {
       name: "Arabica Coffee Beans 1kg",
       sku: "COF-ARAB-1KG",
+      categoryName: "Coffee",
       description: "Full arabica blend for hospitality and office use.",
       unit: "bag",
       price: 18.5,
@@ -32,6 +34,7 @@ export async function GET() {
     {
       name: "Oat Drink Barista 1L",
       sku: "OAT-BAR-1L",
+      categoryName: "Drinks",
       description: "Foams consistently for coffee drinks.",
       unit: "box",
       price: 2.95,

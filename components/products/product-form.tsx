@@ -15,6 +15,7 @@ import { productSchema, type ProductInput } from "@/lib/validation/product";
 type ProductFormProps = {
   mode: "create" | "edit";
   initialValues?: ProductInput;
+  categoryNames?: string[];
   submitAction: (values: ProductInput) => Promise<{ success: boolean; error?: string }>;
   copy: {
     newProduct: string;
@@ -22,6 +23,7 @@ type ProductFormProps = {
     formDescription: string;
     name: string;
     sku: string;
+    category: string;
     unit: string;
     price: string;
     description: string;
@@ -37,6 +39,7 @@ type ProductFormProps = {
 const defaultValues: ProductInput = {
   name: "",
   sku: "",
+  categoryName: "",
   description: "",
   unit: "piece",
   price: 0,
@@ -46,6 +49,7 @@ const defaultValues: ProductInput = {
 export function ProductForm({
   mode,
   initialValues = defaultValues,
+  categoryNames = [],
   submitAction,
   copy,
 }: ProductFormProps) {
@@ -96,6 +100,21 @@ export function ProductForm({
               <Label htmlFor="sku">{copy.sku}</Label>
               <Input id="sku" {...form.register("sku")} />
               <FieldError message={form.formState.errors.sku?.message} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="categoryName">{copy.category}</Label>
+              <Input
+                id="categoryName"
+                list="product-category-options"
+                {...form.register("categoryName")}
+              />
+              <datalist id="product-category-options">
+                {categoryNames.map((categoryName) => (
+                  <option key={categoryName} value={categoryName} />
+                ))}
+              </datalist>
+              <FieldError message={form.formState.errors.categoryName?.message} />
             </div>
 
             <div className="space-y-2">

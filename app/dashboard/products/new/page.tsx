@@ -3,10 +3,12 @@ import { ProductForm } from "@/components/products/product-form";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { getCommonCopy, getProductCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
+import { listProductCategories } from "@/lib/services/product-service";
 
 export default async function NewProductPage() {
-  await requireCompanyContext(["wholesaler_owner", "wholesaler_staff"]);
+  const context = await requireCompanyContext(["wholesaler_owner", "wholesaler_staff"]);
   const locale = await getUserLocale();
+  const categories = await listProductCategories(context.company.id);
   const copy = {
     ...getCommonCopy(locale),
     ...getProductCopy(locale),
@@ -16,6 +18,7 @@ export default async function NewProductPage() {
     <section className="mx-auto max-w-3xl">
       <ProductForm
         mode="create"
+        categoryNames={categories.map((category) => category.name)}
         submitAction={createProductAction}
         copy={copy}
       />
