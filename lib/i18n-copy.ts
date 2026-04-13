@@ -223,6 +223,10 @@ export function getAuthCopy(locale: CopyLocale) {
       buyerDescription: "Sign in with your buyer account to place orders quickly.",
       buyerMissingConfig: "Add NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local first to enable sign-in.",
       inactiveBuyer: "This buyer account is inactive. Contact the wholesaler for access.",
+      switchToBuyerPrompt: "Ordering as a customer?",
+      switchToBuyerLink: "Go to buyer login",
+      switchToWholesalerPrompt: "Managing a wholesale company?",
+      switchToWholesalerLink: "Go to wholesaler login",
     },
     nl: {
       title: "Inloggen",
@@ -246,6 +250,10 @@ export function getAuthCopy(locale: CopyLocale) {
       buyerDescription: "Log in met je klantaccount om snel orders te plaatsen.",
       buyerMissingConfig: "Voeg eerst NEXT_PUBLIC_SUPABASE_ANON_KEY toe aan .env.local om inloggen te activeren.",
       inactiveBuyer: "Dit klantaccount is inactief. Contacteer de groothandel voor toegang.",
+      switchToBuyerPrompt: "Bestel je als klant?",
+      switchToBuyerLink: "Ga naar klant login",
+      switchToWholesalerPrompt: "Beheer je een groothandel?",
+      switchToWholesalerLink: "Ga naar groothandel login",
     },
     fr: {
       title: "Connexion",
@@ -269,6 +277,10 @@ export function getAuthCopy(locale: CopyLocale) {
       buyerDescription: "Connectez-vous avec votre compte client pour commander rapidement.",
       buyerMissingConfig: "Ajoutez d'abord NEXT_PUBLIC_SUPABASE_ANON_KEY dans .env.local pour activer la connexion.",
       inactiveBuyer: "Ce compte client est inactif. Contactez le grossiste pour l'acces.",
+      switchToBuyerPrompt: "Vous commandez comme client ?",
+      switchToBuyerLink: "Aller a la connexion client",
+      switchToWholesalerPrompt: "Vous gerez une entreprise grossiste ?",
+      switchToWholesalerLink: "Aller a la connexion grossiste",
     },
   } satisfies Record<CopyLocale, Record<string, string>>;
 
