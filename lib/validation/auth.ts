@@ -29,3 +29,11 @@ export const passwordUpdateSchema = z
   });
 
 export type PasswordUpdateInput = z.infer<typeof passwordUpdateSchema>;
+
+export const passwordChangeSchema = passwordUpdateSchema.extend({
+  currentPassword: z
+    .string()
+    .min(8, "Current password must be at least 8 characters."),
+});
+
+export type PasswordChangeInput = z.infer<typeof passwordChangeSchema>;
