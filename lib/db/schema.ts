@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -5,6 +6,7 @@ import {
   jsonb,
   numeric,
   pgEnum,
+  pgPolicy,
   pgTable,
   text,
   timestamp,
@@ -34,14 +36,24 @@ export const importStatusEnum = pgEnum("import_status", [
   "failed",
 ]);
 
-export const profiles = pgTable("profiles", {
-  id: uuid("id").primaryKey(),
-  email: varchar("email", { length: 255 }).notNull(),
-  fullName: varchar("full_name", { length: 255 }),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const profiles = pgTable(
+  "profiles",
+  {
+    id: uuid("id").primaryKey(),
+    email: varchar("email", { length: 255 }).notNull(),
+    fullName: varchar("full_name", { length: 255 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    pgPolicy("profiles_select_own", {
+      for: "select",
+      to: "authenticated",
+      using: sql`${table.id} = (select auth.uid())`,
+    }),
+  ],
+).enableRLS();
 
 export const companies = pgTable(
   "companies",
@@ -53,8 +65,30 @@ export const companies = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [uniqueIndex("companies_slug_idx").on(table.slug)],
-);
+  (table) => [
+    uniqueIndex("companies_slug_idx").on(table.slug),
+    pgPolicy("companies_select_members", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.id}
+          and cu.user_id = (select auth.uid())
+          and (
+            cu.role in ('wholesaler_owner', 'wholesaler_staff')
+            or exists (
+              select 1
+              from customers c
+              where c.company_id = ${table.id}
+                and c.auth_user_id = (select auth.uid())
+                and c.is_active is true
+            )
+          )
+      )`,
+    }),
+  ],
+).enableRLS();
 
 export const companyUsers = pgTable(
   "company_users",
@@ -72,8 +106,13 @@ export const companyUsers = pgTable(
   (table) => [
     uniqueIndex("company_users_company_user_idx").on(table.companyId, table.userId),
     index("company_users_user_idx").on(table.userId),
+    pgPolicy("company_users_select_own", {
+      for: "select",
+      to: "authenticated",
+      using: sql`${table.userId} = (select auth.uid())`,
+    }),
   ],
-);
+).enableRLS();
 
 export const customers = pgTable(
   "customers",
@@ -99,8 +138,23 @@ export const customers = pgTable(
     index("customers_company_active_idx").on(table.companyId, table.isActive),
     index("customers_auth_user_idx").on(table.authUserId),
     uniqueIndex("customers_company_auth_user_idx").on(table.companyId, table.authUserId),
+    pgPolicy("customers_select_company_staff_or_own_buyer", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+      )
+      or (
+        ${table.authUserId} = (select auth.uid())
+        and ${table.isActive} is true
+      )`,
+    }),
   ],
-);
+).enableRLS();
 
 export const products = pgTable(
   "products",
@@ -125,8 +179,32 @@ export const products = pgTable(
   (table) => [
     uniqueIndex("products_company_sku_idx").on(table.companyId, table.sku),
     index("products_company_active_idx").on(table.companyId, table.isActive),
+    pgPolicy("products_select_company_members", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and (
+            cu.role in ('wholesaler_owner', 'wholesaler_staff')
+            or (
+              cu.role = 'buyer'
+              and ${table.isActive} is true
+              and exists (
+                select 1
+                from customers c
+                where c.company_id = ${table.companyId}
+                  and c.auth_user_id = (select auth.uid())
+                  and c.is_active is true
+              )
+            )
+          )
+      )`,
+    }),
   ],
-);
+).enableRLS();
 
 export const orders = pgTable(
   "orders",
@@ -155,8 +233,27 @@ export const orders = pgTable(
   (table) => [
     index("orders_company_idx").on(table.companyId),
     index("orders_customer_idx").on(table.customerId),
+    pgPolicy("orders_select_company_staff_or_own_buyer", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+      )
+      or exists (
+        select 1
+        from customers c
+        where c.id = ${table.customerId}
+          and c.company_id = ${table.companyId}
+          and c.auth_user_id = (select auth.uid())
+          and c.is_active is true
+      )`,
+    }),
   ],
-);
+).enableRLS();
 
 export const orderItems = pgTable(
   "order_items",
@@ -176,8 +273,33 @@ export const orderItems = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [index("order_items_order_idx").on(table.orderId)],
-);
+  (table) => [
+    index("order_items_order_idx").on(table.orderId),
+    pgPolicy("order_items_select_visible_orders", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from orders o
+        inner join customers c on c.id = o.customer_id
+        where o.id = ${table.orderId}
+          and (
+            exists (
+              select 1
+              from company_users cu
+              where cu.company_id = o.company_id
+                and cu.user_id = (select auth.uid())
+                and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+            )
+            or (
+              c.auth_user_id = (select auth.uid())
+              and c.is_active is true
+            )
+          )
+      )`,
+    }),
+  ],
+).enableRLS();
 
 export const imports = pgTable(
   "imports",
@@ -195,8 +317,21 @@ export const imports = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [index("imports_company_idx").on(table.companyId)],
-);
+  (table) => [
+    index("imports_company_idx").on(table.companyId),
+    pgPolicy("imports_select_company_staff", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+      )`,
+    }),
+  ],
+).enableRLS();
 
 export const activityLogs = pgTable(
   "activity_logs",
@@ -214,8 +349,21 @@ export const activityLogs = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (table) => [index("activity_logs_company_idx").on(table.companyId)],
-);
+  (table) => [
+    index("activity_logs_company_idx").on(table.companyId),
+    pgPolicy("activity_logs_select_company_staff", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from company_users cu
+        where cu.company_id = ${table.companyId}
+          and cu.user_id = (select auth.uid())
+          and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+      )`,
+    }),
+  ],
+).enableRLS();
 
 export type AppRole = (typeof appRoleEnum.enumValues)[number];
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
