@@ -13,7 +13,7 @@ export default async function NewCustomerPage() {
   };
 
   return (
-    <section className="mx-auto max-w-3xl">
+    <section className="w-full">
       <CustomerForm
         mode="create"
         submitAction={createCustomerAction}

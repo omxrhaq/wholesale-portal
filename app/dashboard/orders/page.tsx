@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Search, ShoppingCart } from "lucide-react";
 
 import { OrdersFilterBar } from "@/components/orders/orders-filter-bar";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireCompanyContext } from "@/lib/companies/context";
 import type { OrderStatus } from "@/lib/db/schema";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -151,11 +153,19 @@ export default async function OrdersPage({
           />
 
           {orders.totalCount === 0 ? (
-            <div className="rounded-2xl border border-border/70 bg-white px-4 py-10 text-center text-sm text-muted-foreground">
-              {query || selectedView !== "all"
-                ? t.noOrdersForFilters
-                : t.noOrdersYet}
-            </div>
+            <EmptyState
+              icon={query || selectedView !== "all" ? Search : ShoppingCart}
+              title={query || selectedView !== "all" ? t.noOrdersForFilters : t.noOrdersYet}
+              description={query || selectedView !== "all" ? t.cardDescription : t.openDescription}
+              className="border-border/70 bg-white/90 py-14"
+              actions={
+                query || selectedView !== "all" ? (
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/orders">{t.clearFilters}</Link>
+                  </Button>
+                ) : null
+              }
+            />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
               <table className="min-w-full divide-y divide-border bg-white text-sm">
@@ -404,6 +414,7 @@ function getOrdersCopy(locale: AppLocale) {
       searchPlaceholder: "Search by customer, email, or order number",
       noOrdersForFilters: "No orders found for these filters.",
       noOrdersYet: "No orders received yet.",
+      clearFilters: "Clear filters",
       customer: "Customer",
       items: "Items",
       status: "Status",
@@ -433,6 +444,7 @@ function getOrdersCopy(locale: AppLocale) {
       searchPlaceholder: "Zoek op klant, e-mail of ordernummer",
       noOrdersForFilters: "Geen orders gevonden voor deze filters.",
       noOrdersYet: "Nog geen orders ontvangen.",
+      clearFilters: "Filters wissen",
       customer: "Klant",
       items: "Regels",
       status: "Status",
@@ -462,6 +474,7 @@ function getOrdersCopy(locale: AppLocale) {
       searchPlaceholder: "Rechercher par client, e-mail ou numero de commande",
       noOrdersForFilters: "Aucune commande trouvee pour ces filtres.",
       noOrdersYet: "Aucune commande recue pour le moment.",
+      clearFilters: "Effacer les filtres",
       customer: "Client",
       items: "Lignes",
       status: "Statut",

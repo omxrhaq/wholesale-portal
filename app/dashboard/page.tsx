@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getUserLocale, type AppLocale } from "@/lib/i18n";
@@ -89,45 +90,46 @@ export default async function DashboardPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
-                  <tr>
-                    <SortableHeader
-                      label={t.customer}
-                      params={params}
-                      sortKey="customer"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.status}
-                      params={params}
-                      sortKey="status"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.total}
-                      params={params}
-                      sortKey="total"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.date}
-                      params={params}
-                      sortKey="date"
-                      activeSort={selectedSort}
-                    />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {latestOrders.length === 0 ? (
+            {latestOrders.length === 0 ? (
+              <EmptyState
+                icon={ShoppingCart}
+                title={t.noOrders}
+                description={t.recentOrdersDescription}
+                className="border-border/70 bg-white/90 py-14"
+              />
+            ) : (
+              <div className="overflow-hidden rounded-2xl border border-border/70">
+                <table className="min-w-full divide-y divide-border bg-white text-sm">
+                  <thead className="bg-slate-50/80 text-left text-slate-600">
                     <tr>
-                      <td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">
-                        {t.noOrders}
-                      </td>
+                      <SortableHeader
+                        label={t.customer}
+                        params={params}
+                        sortKey="customer"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.status}
+                        params={params}
+                        sortKey="status"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.total}
+                        params={params}
+                        sortKey="total"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.date}
+                        params={params}
+                        sortKey="date"
+                        activeSort={selectedSort}
+                      />
                     </tr>
-                  ) : (
-                    latestOrders.map((order) => (
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {latestOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-slate-50/80">
                         <td className="px-4 py-4">
                           <Link
@@ -167,11 +169,11 @@ export default async function DashboardPage({
                           </Link>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

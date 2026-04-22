@@ -1,11 +1,14 @@
 "use client";
 
+import { Clock3, Search, ShoppingCart } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 
 import { placePortalOrderAction } from "@/app/portal/actions";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBanner } from "@/components/ui/status-banner";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { OrderStatus } from "@/lib/db/schema";
 import type { AppLocale } from "@/lib/i18n";
@@ -155,6 +158,11 @@ export function BuyerPortalClient({
     );
   }, [notes, quantities, storageKey]);
 
+  function resetCatalogFilters() {
+    setSearch("");
+    setSelectedCategory("all");
+  }
+
   function updateQuantity(productId: string, rawValue: string) {
     setQuantities((current) => {
       const trimmed = rawValue.trim();
@@ -301,26 +309,34 @@ export function BuyerPortalClient({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
-                <tr>
-                  <th className="px-4 py-3 font-medium">{copy.productName}</th>
-                  <th className="px-4 py-3 font-medium">{copy.category}</th>
-                  <th className="px-4 py-3 font-medium">{copy.price}</th>
-                  <th className="px-4 py-3 font-medium">{copy.unit}</th>
-                  <th className="px-4 py-3 font-medium">{copy.quantity}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {filteredProducts.length === 0 ? (
+          {filteredProducts.length === 0 ? (
+            <EmptyState
+              icon={Search}
+              title={copy.noProductsFound}
+              description={copy.description}
+              className="border-border/70 bg-white/90 py-12"
+              actions={
+                search || selectedCategory !== "all" ? (
+                  <Button type="button" variant="outline" onClick={resetCatalogFilters}>
+                    {copy.clearCatalogFilters}
+                  </Button>
+                ) : null
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border/70">
+              <table className="min-w-full divide-y divide-border bg-white text-sm">
+                <thead className="bg-slate-50/80 text-left text-slate-600">
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                      {copy.noProductsFound}
-                    </td>
+                    <th className="px-4 py-3 font-medium">{copy.productName}</th>
+                    <th className="px-4 py-3 font-medium">{copy.category}</th>
+                    <th className="px-4 py-3 font-medium">{copy.price}</th>
+                    <th className="px-4 py-3 font-medium">{copy.unit}</th>
+                    <th className="px-4 py-3 font-medium">{copy.quantity}</th>
                   </tr>
-                ) : (
-                  filteredProducts.map((product) => (
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {filteredProducts.map((product) => (
                     <tr key={product.id}>
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-950">{product.name}</div>
@@ -346,11 +362,11 @@ export function BuyerPortalClient({
                         />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -363,7 +379,12 @@ export function BuyerPortalClient({
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
               {cartItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{copy.noProductsSelected}</p>
+                <EmptyState
+                  icon={ShoppingCart}
+                  title={copy.noProductsSelected}
+                  description={copy.cartDescription}
+                  className="border-0 bg-transparent px-0 py-4 shadow-none"
+                />
               ) : (
                 <div className="space-y-3">
                   {cartItems.map((item) => (
@@ -403,15 +424,11 @@ export function BuyerPortalClient({
             </div>
 
             {feedback ? (
-              <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                {feedback}
-              </p>
+              <StatusBanner variant="success" title={feedback} />
             ) : null}
 
             {error ? (
-              <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
+              <StatusBanner variant="error" title={error} />
             ) : null}
 
             <Button
@@ -432,9 +449,12 @@ export function BuyerPortalClient({
           </CardHeader>
           <CardContent className="space-y-3">
             {orderHistory.length === 0 ? (
-              <p className="rounded-xl border border-border/70 bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
-                {copy.noPreviousOrders}
-              </p>
+              <EmptyState
+                icon={Clock3}
+                title={copy.noPreviousOrders}
+                description={copy.historyDescription}
+                className="border-border/70 bg-white/90 py-12"
+              />
             ) : (
               orderHistory.map((order) => (
                 <div

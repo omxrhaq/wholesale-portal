@@ -32,7 +32,7 @@ export default async function EditCustomerPage({
   const action = updateCustomerAction.bind(null, customer.id);
 
   return (
-    <section className="mx-auto grid max-w-3xl gap-6">
+    <section className="grid w-full gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
       <CustomerForm
         mode="edit"
         initialValues={{
