@@ -69,6 +69,9 @@ export default async function ProductImportPage({
             </a>
           </Button>
           <Button asChild variant="outline">
+            <Link href="/dashboard/products/categories">{t.manageCategories}</Link>
+          </Button>
+          <Button asChild variant="outline">
             <Link href="/dashboard/products">{t.backToProducts}</Link>
           </Button>
         </div>

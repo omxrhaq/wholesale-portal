@@ -1,9 +1,14 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { productCategories, products } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
 import { logActivity } from "@/lib/services/activity-log-service";
+import {
+  normalizeProductCategoryName,
+  productCategorySchema,
+  type ProductCategoryInput,
+} from "@/lib/validation/product-category";
 import { productSchema, type ProductInput } from "@/lib/validation/product";
 
 export async function listProducts(companyId: string) {
@@ -47,6 +52,150 @@ export async function listProductCategories(companyId: string) {
     .from(productCategories)
     .where(eq(productCategories.companyId, companyId))
     .orderBy(asc(productCategories.name));
+}
+
+export async function listProductCategoriesOverview(companyId: string) {
+  return db
+    .select({
+      id: productCategories.id,
+      name: productCategories.name,
+      createdAt: productCategories.createdAt,
+      updatedAt: productCategories.updatedAt,
+      productCount: sql<number>`count(${products.id})::int`,
+    })
+    .from(productCategories)
+    .leftJoin(
+      products,
+      and(
+        eq(products.categoryId, productCategories.id),
+        eq(products.companyId, productCategories.companyId),
+      ),
+    )
+    .where(eq(productCategories.companyId, companyId))
+    .groupBy(
+      productCategories.id,
+      productCategories.name,
+      productCategories.createdAt,
+      productCategories.updatedAt,
+    )
+    .orderBy(asc(productCategories.name));
+}
+
+export async function getProductCategoryById(companyId: string, categoryId: string) {
+  const [category] = await db
+    .select({
+      id: productCategories.id,
+      name: productCategories.name,
+      createdAt: productCategories.createdAt,
+      updatedAt: productCategories.updatedAt,
+      productCount: sql<number>`count(${products.id})::int`,
+    })
+    .from(productCategories)
+    .leftJoin(
+      products,
+      and(
+        eq(products.categoryId, productCategories.id),
+        eq(products.companyId, productCategories.companyId),
+      ),
+    )
+    .where(
+      and(
+        eq(productCategories.id, categoryId),
+        eq(productCategories.companyId, companyId),
+      ),
+    )
+    .groupBy(
+      productCategories.id,
+      productCategories.name,
+      productCategories.createdAt,
+      productCategories.updatedAt,
+    )
+    .limit(1);
+
+  return category ?? null;
+}
+
+export async function createProductCategory(
+  context: CompanyContext,
+  rawInput: ProductCategoryInput,
+) {
+  const input = productCategorySchema.parse(rawInput);
+  const normalizedName = normalizeProductCategoryName(input.name);
+
+  if (!normalizedName) {
+    throw new Error("Category name is required.");
+  }
+
+  const [category] = await db
+    .insert(productCategories)
+    .values({
+      companyId: context.company.id,
+      name: normalizedName,
+      normalizedName: normalizedName.toLowerCase(),
+    })
+    .returning({
+      id: productCategories.id,
+      name: productCategories.name,
+      updatedAt: productCategories.updatedAt,
+    });
+
+  await logActivity({
+    companyId: context.company.id,
+    userId: context.userId,
+    eventType: "product_category.created",
+    entityType: "product_category",
+    entityId: category.id,
+    metadata: { name: category.name },
+  });
+
+  return category;
+}
+
+export async function updateProductCategory(
+  context: CompanyContext,
+  categoryId: string,
+  rawInput: ProductCategoryInput,
+) {
+  const input = productCategorySchema.parse(rawInput);
+  const normalizedName = normalizeProductCategoryName(input.name);
+
+  if (!normalizedName) {
+    throw new Error("Category name is required.");
+  }
+
+  const [category] = await db
+    .update(productCategories)
+    .set({
+      name: normalizedName,
+      normalizedName: normalizedName.toLowerCase(),
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(productCategories.id, categoryId),
+        eq(productCategories.companyId, context.company.id),
+      ),
+    )
+    .returning({
+      id: productCategories.id,
+      name: productCategories.name,
+      updatedAt: productCategories.updatedAt,
+    });
+
+  if (!category) {
+    throw new Error("Category not found.");
+  }
+
+  await logActivity({
+    companyId: context.company.id,
+    userId: context.userId,
+    eventType: "product_category.updated",
+    entityType: "product_category",
+    entityId: category.id,
+    metadata: { name: category.name },
+  });
+
+  return category;
 }
 
 export async function createProduct(
@@ -155,7 +304,7 @@ export async function resolveProductCategoryId(
   companyId: string,
   categoryName?: string | null,
 ) {
-  const name = normalizeCategoryName(categoryName);
+  const name = normalizeProductCategoryName(categoryName);
 
   if (!name) {
     return null;
@@ -184,11 +333,6 @@ export async function resolveProductCategoryId(
     });
 
   return category.id;
-}
-
-function normalizeCategoryName(value?: string | null) {
-  const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
-  return normalized || null;
 }
 
 const productWithCategorySelect = {

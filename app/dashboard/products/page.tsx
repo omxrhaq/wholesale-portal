@@ -57,6 +57,11 @@ export default async function ProductsPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
+              <Link href="/dashboard/products/categories">
+                {t.manageCategories}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link href="/dashboard/products/import">
                 <FileSpreadsheet className="size-4" />
                 {t.excelImport}

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
@@ -24,6 +25,8 @@ type ProductFormProps = {
     name: string;
     sku: string;
     category: string;
+    uncategorized: string;
+    manageCategories: string;
     unit: string;
     price: string;
     description: string;
@@ -60,6 +63,14 @@ export function ProductForm({
     resolver: zodResolver(productSchema),
     defaultValues: initialValues,
   });
+  const categoryOptions = Array.from(
+    new Set(
+      [
+        ...categoryNames,
+        initialValues.categoryName,
+      ].filter((value): value is string => Boolean(value?.trim())),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "en-US"));
 
   const onSubmit = form.handleSubmit((values) => {
     setServerError(null);
@@ -104,16 +115,26 @@ export function ProductForm({
 
             <div className="space-y-2">
               <Label htmlFor="categoryName">{copy.category}</Label>
-              <Input
+              <select
                 id="categoryName"
-                list="product-category-options"
                 {...form.register("categoryName")}
-              />
-              <datalist id="product-category-options">
-                {categoryNames.map((categoryName) => (
-                  <option key={categoryName} value={categoryName} />
+                className="flex h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm shadow-xs transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">{copy.uncategorized}</option>
+                {categoryOptions.map((categoryName) => (
+                  <option key={categoryName} value={categoryName}>
+                    {categoryName}
+                  </option>
                 ))}
-              </datalist>
+              </select>
+              <div>
+                <Link
+                  href="/dashboard/products/categories"
+                  className="text-sm text-primary underline-offset-4 hover:underline"
+                >
+                  {copy.manageCategories}
+                </Link>
+              </div>
               <FieldError message={form.formState.errors.categoryName?.message} />
             </div>
 
