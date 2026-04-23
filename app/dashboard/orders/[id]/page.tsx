@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { OrderStatusForm } from "@/components/orders/order-status-form";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
+import { OrderTimeline } from "@/components/orders/order-timeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompanyContext } from "@/lib/companies/context";
@@ -159,6 +160,20 @@ export default async function OrderDetailPage({
           ) : null}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.timeline}</CardTitle>
+          <CardDescription>{t.timelineDescription}</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <OrderTimeline
+            entries={order.timeline}
+            locale={locale}
+            copy={t}
+          />
+        </CardContent>
+      </Card>
     </section>
   );
 }
@@ -301,6 +316,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Unit price",
       lineTotal: "Line total",
       notes: "Notes",
+      timeline: "Timeline",
+      timelineDescription: "Track who created the order and every valid status change after that.",
+      orderCreated: "Order created",
+      changedBy: "Changed by",
+      statusChangedFromTo: (from: string, to: string) =>
+        `Status changed from ${from} to ${to}`,
+      statusChangedTo: (to: string) => `Status changed to ${to}`,
+      unknownActor: "Unknown user",
     },
     nl: {
       orderDetail: "Orderdetail",
@@ -320,6 +343,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Stukprijs",
       lineTotal: "Lijntotaal",
       notes: "Notities",
+      timeline: "Tijdlijn",
+      timelineDescription: "Volg wie de order heeft aangemaakt en elke geldige statuswijziging daarna.",
+      orderCreated: "Order aangemaakt",
+      changedBy: "Gewijzigd door",
+      statusChangedFromTo: (from: string, to: string) =>
+        `Status gewijzigd van ${from} naar ${to}`,
+      statusChangedTo: (to: string) => `Status gewijzigd naar ${to}`,
+      unknownActor: "Onbekende gebruiker",
     },
     fr: {
       orderDetail: "Detail commande",
@@ -339,6 +370,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Prix unitaire",
       lineTotal: "Total ligne",
       notes: "Notes",
+      timeline: "Chronologie",
+      timelineDescription: "Suivez qui a cree la commande et chaque changement de statut valide ensuite.",
+      orderCreated: "Commande creee",
+      changedBy: "Modifie par",
+      statusChangedFromTo: (from: string, to: string) =>
+        `Statut modifie de ${from} a ${to}`,
+      statusChangedTo: (to: string) => `Statut modifie vers ${to}`,
+      unknownActor: "Utilisateur inconnu",
     },
   } as const;
 

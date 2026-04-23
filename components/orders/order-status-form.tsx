@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/db/schema";
 import type { AppLocale } from "@/lib/i18n";
 import { getOrderStatusFormCopy } from "@/lib/i18n-copy";
-import { getOrderStatusLabel, orderStatusOptions } from "@/lib/orders";
+import {
+  getAllowedNextOrderStatuses,
+  getOrderStatusLabel,
+} from "@/lib/orders";
 
 export function OrderStatusForm({
   orderId,
@@ -26,6 +29,8 @@ export function OrderStatusForm({
   const [nextStatus, setNextStatus] = useState<OrderStatus>(currentStatus);
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const allowedTransitions = getAllowedNextOrderStatuses(currentStatus);
+  const availableStatuses = [currentStatus, ...allowedTransitions];
 
   function handleSubmit() {
     setServerError(null);
@@ -61,12 +66,15 @@ export function OrderStatusForm({
             compact ? "h-9 w-[150px]" : "h-11 w-full"
           }`}
         >
-          {orderStatusOptions.map((option) => (
+          {availableStatuses.map((option) => (
             <option key={option} value={option}>
               {getOrderStatusLabel(option, locale)}
             </option>
           ))}
         </select>
+        {!compact && allowedTransitions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{copy.noFurtherTransitions}</p>
+        ) : null}
       </div>
 
       {serverError ? (
@@ -78,7 +86,7 @@ export function OrderStatusForm({
       <Button
         type="button"
         onClick={handleSubmit}
-        disabled={isPending}
+        disabled={isPending || nextStatus === currentStatus}
         size={compact ? "sm" : "default"}
       >
         {isPending ? copy.saving : copy.saveStatus}

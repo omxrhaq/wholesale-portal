@@ -724,18 +724,21 @@ export function getOrderStatusFormCopy(locale: CopyLocale) {
       saveStatus: "Save status",
       saving: "Saving...",
       failed: "Failed to update status.",
+      noFurtherTransitions: "This order is in a terminal state and can no longer move forward.",
     },
     nl: {
       updateStatus: "Status wijzigen",
       saveStatus: "Status opslaan",
       saving: "Opslaan...",
       failed: "Status wijzigen mislukt.",
+      noFurtherTransitions: "Deze order zit in een eindstatus en kan niet verder doorgaan.",
     },
     fr: {
       updateStatus: "Modifier le statut",
       saveStatus: "Enregistrer le statut",
       saving: "Enregistrement...",
       failed: "Impossible de modifier le statut.",
+      noFurtherTransitions: "Cette commande est dans un statut final et ne peut plus avancer.",
     },
   } satisfies Record<CopyLocale, Record<string, string>>;
 
