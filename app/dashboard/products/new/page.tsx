@@ -15,7 +15,7 @@ export default async function NewProductPage() {
   };
 
   return (
-    <section className="mx-auto max-w-3xl">
+    <section className="w-full">
       <ProductForm
         mode="create"
         categoryNames={categories.map((category) => category.name)}

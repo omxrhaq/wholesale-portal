@@ -1,4 +1,4 @@
-import { KeyRound } from "lucide-react";
+import { KeyRound, Package2, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,6 +7,7 @@ import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BuyerPortalClient } from "@/components/portal/buyer-portal-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireAuthUser } from "@/lib/auth/session";
 import { getPasswordCopy, getPortalCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
@@ -42,7 +43,7 @@ export default async function PortalPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
+      <div className="w-full">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-3">
@@ -66,19 +67,25 @@ export default async function PortalPage() {
                 <LogoutButton />
               </div>
             </div>
-          <CardDescription>
+            <CardDescription>
               {t.description}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             {!matchedCustomer ? (
-              <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                {t.noCustomer}
-              </p>
+              <EmptyState
+                icon={ShoppingCart}
+                title={t.buyerPortal}
+                description={t.noCustomer}
+                className="border-border/70 bg-white/90 py-14"
+              />
             ) : activeProducts.length === 0 ? (
-              <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                {t.noProductsAvailable}
-              </p>
+              <EmptyState
+                icon={Package2}
+                title={t.catalog}
+                description={t.noProductsAvailable}
+                className="border-border/70 bg-white/90 py-14"
+              />
             ) : (
               <BuyerPortalClient
                 locale={locale}
@@ -88,7 +95,7 @@ export default async function PortalPage() {
                 copy={t}
               />
             )}
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
     </main>

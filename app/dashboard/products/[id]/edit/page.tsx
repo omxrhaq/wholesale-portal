@@ -34,7 +34,7 @@ export default async function EditProductPage({
   const action = updateProductAction.bind(null, product.id);
 
   return (
-    <section className="mx-auto max-w-3xl">
+    <section className="w-full">
       <ProductForm
         mode="edit"
         initialValues={{

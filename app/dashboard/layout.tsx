@@ -21,7 +21,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,_#f7f5ef_0%,_#f5efe4_100%)]">
-      <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-4 sm:px-6 lg:px-8">
+      <div className="flex min-h-screen w-full flex-col px-4 py-4 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-col gap-4 rounded-[2rem] border border-border/70 bg-white/80 px-5 py-4 shadow-sm backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">

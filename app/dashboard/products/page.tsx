@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { FileSpreadsheet, Plus } from "lucide-react";
+import { FileSpreadsheet, Package2, Plus } from "lucide-react";
 
 import { DeactivateProductButton } from "@/components/products/deactivate-product-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBanner } from "@/components/ui/status-banner";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getCommonCopy, getProductCopy } from "@/lib/i18n-copy";
@@ -77,69 +79,82 @@ export default async function ProductsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {params.status === "saved" ? (
-            <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-              {t.saved}
-            </div>
+            <StatusBanner
+              variant="success"
+              title={t.saved}
+              description={t.productDescription}
+            />
           ) : null}
 
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
-                <tr>
-                  <SortableHeader
-                    label={t.name}
-                    params={params}
-                    sortKey="name"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label="SKU"
-                    params={params}
-                    sortKey="sku"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.category}
-                    params={params}
-                    sortKey="category"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.price}
-                    params={params}
-                    sortKey="price"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.unit}
-                    params={params}
-                    sortKey="unit"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.status}
-                    params={params}
-                    sortKey="status"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.updated}
-                    params={params}
-                    sortKey="updated"
-                    activeSort={selectedSort}
-                  />
-                  <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {products.length === 0 ? (
+          {products.length === 0 ? (
+            <EmptyState
+              icon={Package2}
+              title={t.noProducts}
+              description={t.productDescription}
+              className="border-border/70 bg-white/90 py-14"
+              actions={
+                <>
+                  <Button asChild>
+                    <Link href="/dashboard/products/new">{t.newProduct}</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard/products/import">{t.excelImport}</Link>
+                  </Button>
+                </>
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border/70">
+              <table className="min-w-full divide-y divide-border bg-white text-sm">
+                <thead className="bg-slate-50/80 text-left text-slate-600">
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                      {t.noProducts}
-                    </td>
+                    <SortableHeader
+                      label={t.name}
+                      params={params}
+                      sortKey="name"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label="SKU"
+                      params={params}
+                      sortKey="sku"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.category}
+                      params={params}
+                      sortKey="category"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.price}
+                      params={params}
+                      sortKey="price"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.unit}
+                      params={params}
+                      sortKey="unit"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.status}
+                      params={params}
+                      sortKey="status"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.updated}
+                      params={params}
+                      sortKey="updated"
+                      activeSort={selectedSort}
+                    />
+                    <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
                   </tr>
-                ) : (
-                  products.map((product) => (
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {products.map((product) => (
                     <tr key={product.id} className="align-top">
                       <td className="px-4 py-4">
                         <div className="font-medium text-slate-950">{product.name}</div>
@@ -185,11 +200,11 @@ export default async function ProductsPage({
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>

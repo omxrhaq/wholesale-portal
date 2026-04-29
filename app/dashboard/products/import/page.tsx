@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileSpreadsheet } from "lucide-react";
 
 import { ImportStatusBadge } from "@/components/imports/import-status-badge";
 import { ProductImportForm } from "@/components/products/product-import-form";
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatDate } from "@/lib/format";
 import { getProductCopy, getProductImportCopy } from "@/lib/i18n-copy";
@@ -52,7 +54,7 @@ export default async function ProductImportPage({
   );
 
   return (
-    <section className="mx-auto max-w-6xl space-y-6">
+    <section className="w-full space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
@@ -87,60 +89,58 @@ export default async function ProductImportPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
-                <tr>
-                  <SortableHeader
-                    label={t.file}
-                    params={params}
-                    sortKey="file"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.status}
-                    params={params}
-                    sortKey="status"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.totalRows}
-                    params={params}
-                    sortKey="total"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.imported}
-                    params={params}
-                    sortKey="imported"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.failed}
-                    params={params}
-                    sortKey="failed"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.date}
-                    params={params}
-                    sortKey="created"
-                    activeSort={selectedSort}
-                  />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {importHistory.length === 0 ? (
+          {importHistory.length === 0 ? (
+            <EmptyState
+              icon={FileSpreadsheet}
+              title={t.noImports}
+              description={t.historyDescription}
+              className="border-border/70 bg-white/90 py-14"
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border/70">
+              <table className="min-w-full divide-y divide-border bg-white text-sm">
+                <thead className="bg-slate-50/80 text-left text-slate-600">
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-4 py-10 text-center text-muted-foreground"
-                    >
-                      {t.noImports}
-                    </td>
+                    <SortableHeader
+                      label={t.file}
+                      params={params}
+                      sortKey="file"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.status}
+                      params={params}
+                      sortKey="status"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.totalRows}
+                      params={params}
+                      sortKey="total"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.imported}
+                      params={params}
+                      sortKey="imported"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.failed}
+                      params={params}
+                      sortKey="failed"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.date}
+                      params={params}
+                      sortKey="created"
+                      activeSort={selectedSort}
+                    />
                   </tr>
-                ) : (
-                  importHistory.map((importJob) => (
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {importHistory.map((importJob) => (
                     <tr key={importJob.id}>
                       <td className="px-4 py-4 font-medium text-slate-950">
                         {importJob.fileName}
@@ -161,11 +161,11 @@ export default async function ProductImportPage({
                         {formatDate(importJob.createdAt, locale)}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>

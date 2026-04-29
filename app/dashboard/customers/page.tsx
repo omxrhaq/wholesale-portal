@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 
 import { CustomerActiveButton } from "@/components/customers/customer-active-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusBanner } from "@/components/ui/status-banner";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatDate } from "@/lib/format";
 import { getCommonCopy, getCustomerCopy } from "@/lib/i18n-copy";
@@ -43,9 +46,11 @@ export default async function CustomersPage({
   return (
     <section className="space-y-6">
       {params.status === "saved" ? (
-        <p className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {t.saved}
-        </p>
+        <StatusBanner
+          variant="success"
+          title={t.saved}
+          description={t.overviewDescription}
+        />
       ) : null}
 
       <Card>
@@ -59,52 +64,58 @@ export default async function CustomersPage({
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
-                <tr>
-                  <SortableHeader
-                    label={t.name}
-                    params={params}
-                    sortKey="name"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.email}
-                    params={params}
-                    sortKey="email"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.phone}
-                    params={params}
-                    sortKey="phone"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.status}
-                    params={params}
-                    sortKey="status"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.created}
-                    params={params}
-                    sortKey="created"
-                    activeSort={selectedSort}
-                  />
-                  <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {customers.length === 0 ? (
+          {customers.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title={t.noCustomers}
+              description={t.overviewDescription}
+              className="border-border/70 bg-white/90 py-14"
+              actions={
+                <Button asChild>
+                  <Link href="/dashboard/customers/new">{t.newCustomer}</Link>
+                </Button>
+              }
+            />
+          ) : (
+            <div className="overflow-hidden rounded-2xl border border-border/70">
+              <table className="min-w-full divide-y divide-border bg-white text-sm">
+                <thead className="bg-slate-50/80 text-left text-slate-600">
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-muted-foreground">
-                      {t.noCustomers}
-                    </td>
+                    <SortableHeader
+                      label={t.name}
+                      params={params}
+                      sortKey="name"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.email}
+                      params={params}
+                      sortKey="email"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.phone}
+                      params={params}
+                      sortKey="phone"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.status}
+                      params={params}
+                      sortKey="status"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.created}
+                      params={params}
+                      sortKey="created"
+                      activeSort={selectedSort}
+                    />
+                    <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
                   </tr>
-                ) : (
-                  customers.map((customer) => (
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {customers.map((customer) => (
                     <tr key={customer.id}>
                       <td className="px-4 py-4 font-medium text-slate-950">
                         {customer.name}
@@ -145,11 +156,11 @@ export default async function CustomersPage({
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>
