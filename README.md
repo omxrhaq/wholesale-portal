@@ -5,7 +5,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 ## Current MVP
 
 - Wholesaler dashboard with protected login and company-scoped data.
-- Product management with create, edit, deactivate, category assignment and list views.
+- Product management with create, edit, deactivate, category assignment, category management and list views.
 - Excel product import with downloadable template, category mapping, validation, duplicate handling and import history.
 - Customer management with create, edit, deactivate and buyer portal access setup.
 - Orders overview with search, sortable columns, status views and order detail pages.
@@ -41,6 +41,9 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `/dashboard/orders/[id]`
 - `/dashboard/products`
 - `/dashboard/products/[id]/edit`
+- `/dashboard/products/categories`
+- `/dashboard/products/categories/[id]/edit`
+- `/dashboard/products/categories/new`
 - `/dashboard/products/import`
 - `/dashboard/products/new`
 - `/forgot-password`
