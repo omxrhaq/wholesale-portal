@@ -13,6 +13,33 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - Language switcher for English, Dutch and French UI copy.
 - Database-level RLS policies plus automatic RLS enabling for new public tables.
 
+## Current Status
+
+- Product categories are fully integrated across product forms, imports, dashboard lists and the buyer portal.
+- Dashboard and portal UX have been widened and polished with empty states, loading screens, skeletons and reusable status banners.
+- The order system now enforces strict status transitions, logs audit events and shows an order timeline in the dashboard.
+- Buyer reorder flow is available from portal order history for faster repeat ordering.
+- Authentication and authorization run through Supabase auth plus company-scoped memberships in `company_users`.
+
+## What Still Needs Work
+
+- Identity hardening:
+  - replace remaining email-driven buyer linking flows with an explicit `portalUserId` model
+  - make company selection explicit for users who can belong to more than one company
+  - audit all server actions for strict company-scoped entity checks
+- Automation engine:
+  - add DB-backed rules with simple conditions and actions
+  - support first actions such as auto-confirm, assign owner and stale-order reminders
+- Order workflow follow-up:
+  - add explicit success feedback after status changes
+  - add assignment / ownership support for wholesaler staff
+- Import improvements:
+  - row-level error reporting
+  - stronger duplicate handling and safer retry flows
+- Quality and operations:
+  - add unit and integration tests for services and critical server actions
+  - add analytics and notification flows once the security and automation foundations are finished
+
 ## Stack
 
 - Next.js: `next@16.2.3`
@@ -67,6 +94,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - RLS is enabled on public app tables with policies based on `company_users` roles and `customers.auth_user_id`.
 - New public tables automatically get RLS enabled through the `ensure_rls_on_public_tables` event trigger.
 - Order items store product name and price snapshots at order time.
+- Activity logs are used as the audit trail for customer, product and order events.
 
 ### Migrations
 
