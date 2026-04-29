@@ -1,7 +1,16 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { customers, orderItems, orders, type OrderStatus } from "@/lib/db/schema";
+import {
+  activityLogs,
+  customers,
+  orderItems,
+  orders,
+  profiles,
+  type OrderStatus,
+} from "@/lib/db/schema";
+import type { CompanyContext } from "@/lib/companies/context";
+import { canTransitionOrderStatus } from "@/lib/orders";
 
 type ListOrdersOptions = {
   companyId: string;
@@ -25,6 +34,20 @@ type ListOrdersOptions = {
     | "items_asc";
   page?: number;
   pageSize?: number;
+};
+
+export type OrderTimelineEntry = {
+  id: string;
+  type: "created" | "status_changed";
+  occurredAt: Date;
+  actor: {
+    userId: string | null;
+    name: string;
+    email: string | null;
+    role: string | null;
+  };
+  previousStatus: OrderStatus | null;
+  nextStatus: OrderStatus;
 };
 
 export async function listOrders({
@@ -263,8 +286,212 @@ export async function getOrderById(companyId: string, orderId: string) {
     .where(eq(orderItems.orderId, order.id))
     .orderBy(desc(orderItems.createdAt));
 
+  const activity = await db
+    .select({
+      id: activityLogs.id,
+      eventType: activityLogs.eventType,
+      userId: activityLogs.userId,
+      createdAt: activityLogs.createdAt,
+      metadata: activityLogs.metadata,
+      actorName: profiles.fullName,
+      actorEmail: profiles.email,
+    })
+    .from(activityLogs)
+    .leftJoin(profiles, eq(activityLogs.userId, profiles.id))
+    .where(
+      and(
+        eq(activityLogs.companyId, companyId),
+        eq(activityLogs.entityType, "order"),
+        eq(activityLogs.entityId, order.id),
+        inArray(activityLogs.eventType, ["order.created", "order.status_changed"]),
+      ),
+    )
+    .orderBy(asc(activityLogs.createdAt));
+
+  const timeline = buildOrderTimeline(order, activity);
+
   return {
     ...order,
     items,
+    timeline,
   };
+}
+
+export async function updateOrderStatus(
+  context: CompanyContext,
+  orderId: string,
+  nextStatus: OrderStatus,
+) {
+  const [currentOrder] = await db
+    .select({
+      id: orders.id,
+      status: orders.status,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.companyId, context.company.id)))
+    .limit(1);
+
+  if (!currentOrder) {
+    throw new Error("Order not found.");
+  }
+
+  if (currentOrder.status === nextStatus) {
+    return currentOrder;
+  }
+
+  if (!canTransitionOrderStatus(currentOrder.status, nextStatus)) {
+    throw new Error(
+      `Invalid status transition: ${currentOrder.status} -> ${nextStatus}.`,
+    );
+  }
+
+  await db.transaction(async (tx) => {
+    const [updatedOrder] = await tx
+      .update(orders)
+      .set({
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.companyId, context.company.id),
+          eq(orders.status, currentOrder.status),
+        ),
+      )
+      .returning({
+        id: orders.id,
+        status: orders.status,
+      });
+
+    if (!updatedOrder) {
+      throw new Error("Order status changed before this update. Refresh and try again.");
+    }
+
+    await tx.insert(activityLogs).values({
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "order.status_changed",
+      entityType: "order",
+      entityId: orderId,
+      metadata: {
+        previousStatus: currentOrder.status,
+        nextStatus,
+        actorRole: context.companyUser.role,
+      },
+    });
+  });
+
+  return {
+    id: orderId,
+    status: nextStatus,
+  };
+}
+
+function buildOrderTimeline(
+  order: {
+    id: string;
+    status: OrderStatus;
+    createdAt: Date;
+    customerName: string;
+    customerEmail: string | null;
+  },
+  activity: Array<{
+    id: string;
+    eventType: string;
+    userId: string;
+    createdAt: Date;
+    metadata: Record<string, unknown> | null;
+    actorName: string | null;
+    actorEmail: string | null;
+  }>,
+): OrderTimelineEntry[] {
+  const createdEvent = activity.find((entry) => entry.eventType === "order.created");
+  const timeline: OrderTimelineEntry[] = [];
+
+  if (createdEvent) {
+    timeline.push({
+      id: createdEvent.id,
+      type: "created",
+      occurredAt: createdEvent.createdAt,
+      actor: {
+        userId: createdEvent.userId,
+        name: createdEvent.actorName ?? createdEvent.actorEmail ?? order.customerName,
+        email: createdEvent.actorEmail ?? order.customerEmail,
+        role: getMetadataString(createdEvent.metadata, "actorRole"),
+      },
+      previousStatus: null,
+      nextStatus: getMetadataOrderStatus(createdEvent.metadata, "nextStatus") ?? "new",
+    });
+  } else {
+    timeline.push({
+      id: `${order.id}-created`,
+      type: "created",
+      occurredAt: order.createdAt,
+      actor: {
+        userId: null,
+        name: order.customerName,
+        email: order.customerEmail,
+        role: "buyer",
+      },
+      previousStatus: null,
+      nextStatus: "new",
+    });
+  }
+
+  for (const entry of activity) {
+    if (entry.eventType !== "order.status_changed") {
+      continue;
+    }
+
+    const nextStatus = getMetadataOrderStatus(entry.metadata, "nextStatus");
+    if (!nextStatus) {
+      continue;
+    }
+
+    timeline.push({
+      id: entry.id,
+      type: "status_changed",
+      occurredAt: entry.createdAt,
+      actor: {
+        userId: entry.userId,
+        name: entry.actorName ?? entry.actorEmail ?? "Unknown user",
+        email: entry.actorEmail,
+        role: getMetadataString(entry.metadata, "actorRole"),
+      },
+      previousStatus: getMetadataOrderStatus(entry.metadata, "previousStatus"),
+      nextStatus,
+    });
+  }
+
+  return timeline.sort(
+    (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
+  );
+}
+
+function getMetadataOrderStatus(
+  metadata: Record<string, unknown> | null,
+  key: "previousStatus" | "nextStatus",
+): OrderStatus | null {
+  const value = metadata?.[key];
+
+  if (
+    value === "new" ||
+    value === "confirmed" ||
+    value === "processing" ||
+    value === "completed" ||
+    value === "cancelled"
+  ) {
+    return value;
+  }
+
+  return null;
+}
+
+function getMetadataString(
+  metadata: Record<string, unknown> | null,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "string" ? value : null;
 }

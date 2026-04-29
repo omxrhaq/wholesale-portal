@@ -9,6 +9,14 @@ export const orderStatusOptions: OrderStatus[] = [
   "cancelled",
 ];
 
+export const allowedOrderStatusTransitions: Record<OrderStatus, OrderStatus[]> = {
+  new: ["confirmed", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
 export function getOrderStatusLabel(
   status: OrderStatus,
   locale: AppLocale = "en",
@@ -42,6 +50,21 @@ export function getOrderStatusLabel(
 
 export function isOpenOrderStatus(status: OrderStatus) {
   return status === "new" || status === "confirmed" || status === "processing";
+}
+
+export function getAllowedNextOrderStatuses(status: OrderStatus) {
+  return allowedOrderStatusTransitions[status];
+}
+
+export function canTransitionOrderStatus(
+  currentStatus: OrderStatus,
+  nextStatus: OrderStatus,
+) {
+  if (currentStatus === nextStatus) {
+    return true;
+  }
+
+  return allowedOrderStatusTransitions[currentStatus].includes(nextStatus);
 }
 
 export function getOrderStatusClasses(status: OrderStatus) {
