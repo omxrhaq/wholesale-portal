@@ -60,7 +60,7 @@ export default async function ProductImportPage({
           <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
             {t.productImport}
           </p>
-          <h2 className="text-3xl font-semibold text-slate-950">
+          <h2 className="text-3xl font-semibold text-foreground">
             {t.importExcelCatalog}
           </h2>
         </div>
@@ -94,12 +94,12 @@ export default async function ProductImportPage({
               icon={FileSpreadsheet}
               title={t.noImports}
               description={t.historyDescription}
-              className="border-border/70 bg-white/90 py-14"
+              className="border-border/70 bg-card/88 py-14"
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
                   <tr>
                     <SortableHeader
                       label={t.file}
@@ -141,23 +141,23 @@ export default async function ProductImportPage({
                 </thead>
                 <tbody className="divide-y divide-border/70">
                   {importHistory.map((importJob) => (
-                    <tr key={importJob.id}>
-                      <td className="px-4 py-4 font-medium text-slate-950">
+                    <tr key={importJob.id} className="hover:bg-accent/45">
+                      <td className="px-4 py-4 font-medium text-foreground">
                         {importJob.fileName}
                       </td>
                       <td className="px-4 py-4">
                         <ImportStatusBadge status={importJob.status} locale={locale} />
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {importJob.totalRows}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {importJob.importedRows}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {importJob.failedRows}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(importJob.createdAt, locale)}
                       </td>
                     </tr>
@@ -192,7 +192,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildImportsUrl({ ...params, sort: nextSort })}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>

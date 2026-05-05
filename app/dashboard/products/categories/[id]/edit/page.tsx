@@ -40,7 +40,7 @@ export default async function EditProductCategoryPage({
         <CardHeader>
           <CardTitle>{copy.categoryLinkedProducts}</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-slate-700">
+        <CardContent className="text-sm text-foreground/80">
           {category.productCount}
         </CardContent>
       </Card>

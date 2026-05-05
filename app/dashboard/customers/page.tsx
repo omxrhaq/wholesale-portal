@@ -49,7 +49,6 @@ export default async function CustomersPage({
         <StatusBanner
           variant="success"
           title={t.saved}
-          description={t.overviewDescription}
         />
       ) : null}
 
@@ -69,7 +68,7 @@ export default async function CustomersPage({
               icon={Users}
               title={t.noCustomers}
               description={t.overviewDescription}
-              className="border-border/70 bg-white/90 py-14"
+              className="border-border/70 bg-card/88 py-14"
               actions={
                 <Button asChild>
                   <Link href="/dashboard/customers/new">{t.newCustomer}</Link>
@@ -78,8 +77,8 @@ export default async function CustomersPage({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
                   <tr>
                     <SortableHeader
                       label={t.name}
@@ -111,33 +110,33 @@ export default async function CustomersPage({
                       sortKey="created"
                       activeSort={selectedSort}
                     />
-                    <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">{common.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
                   {customers.map((customer) => (
-                    <tr key={customer.id}>
-                      <td className="px-4 py-4 font-medium text-slate-950">
+                    <tr key={customer.id} className="hover:bg-accent/45">
+                      <td className="px-4 py-4 font-medium text-foreground">
                         {customer.name}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {customer.email ?? t.noEmail}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {customer.phone ?? t.noPhone}
                       </td>
                       <td className="px-4 py-4">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
                             customer.isActive
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-600"
+                              ? "border border-sky-200/90 bg-sky-50 text-sky-900"
+                              : "border border-slate-300/80 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                           }`}
                         >
                           {customer.isActive ? common.active : common.inactive}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(customer.createdAt, locale)}
                       </td>
                       <td className="px-4 py-4">
@@ -187,7 +186,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildCustomersUrl({ ...params, sort: nextSort })}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>

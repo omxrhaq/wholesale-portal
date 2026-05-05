@@ -91,7 +91,7 @@ export default async function ProductsPage({
               icon={Package2}
               title={t.noProducts}
               description={t.productDescription}
-              className="border-border/70 bg-white/90 py-14"
+              className="border-border/70 bg-card/88 py-14"
               actions={
                 <>
                   <Button asChild>
@@ -105,8 +105,8 @@ export default async function ProductsPage({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
                   <tr>
                     <SortableHeader
                       label={t.name}
@@ -150,38 +150,38 @@ export default async function ProductsPage({
                       sortKey="updated"
                       activeSort={selectedSort}
                     />
-                    <th className="px-4 py-3 font-medium text-right">{common.actions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">{common.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
                   {products.map((product) => (
-                    <tr key={product.id} className="align-top">
+                    <tr key={product.id} className="align-top hover:bg-accent/45">
                       <td className="px-4 py-4">
-                        <div className="font-medium text-slate-950">{product.name}</div>
+                        <div className="font-medium text-foreground">{product.name}</div>
                         {product.description ? (
                           <p className="mt-1 max-w-md text-muted-foreground">
                             {product.description}
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{product.sku}</td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">{product.sku}</td>
+                      <td className="px-4 py-4 text-foreground/80">
                         {product.categoryName ?? t.uncategorized}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{formatCurrency(product.price, locale)}</td>
-                      <td className="px-4 py-4 text-slate-700">{product.unit}</td>
+                      <td className="px-4 py-4 text-foreground/80">{formatCurrency(product.price, locale)}</td>
+                      <td className="px-4 py-4 text-foreground/80">{product.unit}</td>
                       <td className="px-4 py-4">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
                             product.isActive
-                              ? "bg-emerald-100 text-emerald-900"
-                              : "bg-slate-200 text-slate-700"
+                              ? "border border-sky-200/90 bg-sky-50 text-sky-900"
+                              : "border border-slate-300/80 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                           }`}
                         >
                           {product.isActive ? common.active : common.inactive}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(product.updatedAt, locale)}
                       </td>
                       <td className="px-4 py-4">
@@ -231,7 +231,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildProductsUrl({ ...params, sort: nextSort })}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>

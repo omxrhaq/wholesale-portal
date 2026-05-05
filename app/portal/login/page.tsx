@@ -4,9 +4,10 @@ import Link from "next/link";
 import { portalLoginAction } from "@/app/portal/login/actions";
 import { LoginForm } from "@/components/auth/login-form";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { hasSupabaseEnv } from "@/lib/env";
-import { getAuthCopy } from "@/lib/i18n-copy";
+import { getAuthCopy, getCommonCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
 
 export default async function PortalLoginPage({
@@ -18,18 +19,27 @@ export default async function PortalLoginPage({
   const isConfigured = hasSupabaseEnv();
   const locale = await getUserLocale();
   const t = getAuthCopy(locale);
+  const common = getCommonCopy(locale);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(15,118,110,0.14),_transparent_35%),linear-gradient(180deg,_#f5fbfa_0%,_#ecf7f5_45%,_#e6f0ed_100%)] px-6 py-10">
+    <main className="min-h-screen bg-background px-6 py-10">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-5xl place-items-center">
-        <Card className="w-full max-w-md border-white/70 bg-white/90 backdrop-blur">
+        <Card className="w-full max-w-md">
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="inline-flex items-center gap-2">
-                <ShoppingCart className="size-5 text-teal-700" />
+                <ShoppingCart className="size-5 text-primary" />
                 {t.buyerTitle}
               </CardTitle>
-              <LanguageSwitcher currentLocale={locale} />
+              <div className="flex items-center gap-2">
+                <ThemeToggle
+                  label={common.theme}
+                  lightLabel={common.lightMode}
+                  darkLabel={common.darkMode}
+                  systemLabel={common.systemMode}
+                />
+                <LanguageSwitcher currentLocale={locale} />
+              </div>
             </div>
             <CardDescription>
               {t.buyerDescription}
@@ -37,7 +47,7 @@ export default async function PortalLoginPage({
           </CardHeader>
           <CardContent className="space-y-4">
             {!isConfigured ? (
-              <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
                 {t.buyerMissingConfig}
               </div>
             ) : null}
@@ -55,7 +65,7 @@ export default async function PortalLoginPage({
             ) : null}
 
             {params.status === "password-updated" ? (
-              <div className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <div className="rounded-2xl border border-sky-200/90 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-800/80 dark:bg-sky-950/35 dark:text-sky-100">
                 {t.passwordUpdated}
               </div>
             ) : null}
@@ -69,7 +79,10 @@ export default async function PortalLoginPage({
 
             <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3 text-center text-sm text-muted-foreground">
               {t.switchToWholesalerPrompt}{" "}
-              <Link className="font-medium text-slate-950 underline-offset-4 hover:underline" href="/login">
+              <Link
+                className="font-medium text-foreground underline-offset-4 hover:text-primary hover:underline"
+                href="/login"
+              >
                 {t.switchToWholesalerLink}
               </Link>
             </div>

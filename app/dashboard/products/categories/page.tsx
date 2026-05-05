@@ -69,8 +69,8 @@ export default async function ProductCategoriesPage({
         </CardHeader>
         <CardContent>
           <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
+            <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+              <thead className="bg-muted/70 text-left text-muted-foreground">
                 <tr>
                   <SortableHeader
                     label={t.name}
@@ -102,14 +102,14 @@ export default async function ProductCategoriesPage({
                   </tr>
                 ) : (
                   categories.map((category) => (
-                    <tr key={category.id}>
-                      <td className="px-4 py-4 font-medium text-slate-950">
+                    <tr key={category.id} className="hover:bg-accent/45">
+                      <td className="px-4 py-4 font-medium text-foreground">
                         {category.name}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {category.productCount}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(category.updatedAt, locale)}
                       </td>
                       <td className="px-4 py-4">
@@ -153,7 +153,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildCategoriesUrl({ ...params, sort: nextSort })}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>

@@ -56,7 +56,7 @@ export function OrdersFilterBar({
   return (
     <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
       <div className="space-y-2">
-        <label htmlFor="q" className="text-sm font-medium text-slate-950">
+        <label htmlFor="q" className="text-sm font-medium text-foreground">
           {label}
         </label>
         <input

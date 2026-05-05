@@ -1,22 +1,23 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
-import { companyUsers, profiles } from "@/lib/db/schema";
+import { companyUsers, customers, profiles } from "@/lib/db/schema";
 import { hasSupabaseServiceRoleKey } from "@/lib/env";
 import {
   createCustomer,
   getCustomerById,
-  linkCustomerToAuthUser,
   setCustomerActive,
   updateCustomer,
 } from "@/lib/services/customer-service";
 import { logActivity } from "@/lib/services/activity-log-service";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   customerPortalLoginSchema,
   customerSchema,
@@ -27,6 +28,7 @@ import {
 type CustomerActionResult = {
   success: boolean;
   error?: string;
+  portalSetupLink?: string;
 };
 
 export async function createCustomerAction(
@@ -39,7 +41,30 @@ export async function createCustomerAction(
     ]);
     const parsed = customerSchema.parse(values);
 
-    await createCustomer(context, parsed);
+    if (parsed.isActive && parsed.email && !hasSupabaseServiceRoleKey()) {
+      return {
+        success: false,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to .env.local to automatically send portal setup emails for new customers.",
+      };
+    }
+
+    const customer = await createCustomer(context, parsed);
+
+    if (customer.isActive && customer.email) {
+      try {
+        await sendCustomerPortalSetupEmail(context, customer.id);
+      } catch (error) {
+        revalidatePath("/dashboard");
+        revalidatePath("/dashboard/customers");
+
+        return {
+          success: false,
+          error: `Customer saved, but the portal setup email could not be sent: ${getActionErrorMessage(error)}`,
+        };
+      }
+    }
+
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/customers");
 
@@ -135,43 +160,7 @@ export async function setupCustomerPortalLoginAction(
       ? await updateAuthUserPassword(existingUser.id, parsed.password)
       : await createAuthUser(customer.email, parsed.password, customer.name);
 
-    const existingMembership = await db
-      .select({ role: companyUsers.role })
-      .from(companyUsers)
-      .where(
-        and(
-          eq(companyUsers.companyId, context.company.id),
-          eq(companyUsers.userId, authUser.id),
-        ),
-      )
-      .limit(1);
-
-    const currentRole = existingMembership[0]?.role;
-
-    await db
-      .insert(profiles)
-      .values({
-        id: authUser.id,
-        email: customer.email,
-        fullName: customer.name,
-      })
-      .onConflictDoUpdate({
-        target: profiles.id,
-        set: {
-          email: customer.email,
-          fullName: customer.name,
-        },
-      });
-
-    if (!currentRole) {
-      await db.insert(companyUsers).values({
-        companyId: context.company.id,
-        userId: authUser.id,
-        role: "buyer",
-      });
-    }
-
-    await linkCustomerToAuthUser(context, customer.id, authUser.id);
+    await ensureBuyerAccess(context.company.id, customer.id, authUser.id, customer.email, customer.name);
 
     await logActivity({
       companyId: context.company.id,
@@ -230,12 +219,241 @@ export async function setupCustomerPortalLoginAction(
   }
 }
 
+export async function sendCustomerPortalSetupEmailAction(
+  customerId: string,
+): Promise<CustomerActionResult> {
+  try {
+    const context = await requireCompanyContext([
+      "wholesaler_owner",
+      "wholesaler_staff",
+    ]);
+
+    if (!hasSupabaseServiceRoleKey()) {
+      return {
+        success: false,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to .env.local to send portal setup emails from the dashboard.",
+      };
+    }
+
+    await sendCustomerPortalSetupEmail(context, customerId);
+    revalidatePath("/dashboard/customers");
+    revalidatePath(`/dashboard/customers/${customerId}/edit`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error),
+    };
+  }
+}
+
+export async function generateCustomerPortalSetupLinkAction(
+  customerId: string,
+): Promise<CustomerActionResult> {
+  try {
+    const context = await requireCompanyContext([
+      "wholesaler_owner",
+      "wholesaler_staff",
+    ]);
+
+    if (!hasSupabaseServiceRoleKey()) {
+      return {
+        success: false,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY is missing. Add it to .env.local to generate portal setup links from the dashboard.",
+      };
+    }
+
+    const customer = await getCustomerById(context.company.id, customerId);
+
+    if (!customer) {
+      return { success: false, error: "Customer not found." };
+    }
+
+    if (!customer.isActive) {
+      return {
+        success: false,
+        error: "Activate this customer before enabling portal login.",
+      };
+    }
+
+    if (!customer.email) {
+      return {
+        success: false,
+        error: "Add an email address to this customer first.",
+      };
+    }
+
+    const redirectTo = await buildBuyerPasswordSetupUrl();
+    const supabaseAdmin = createSupabaseAdminClient();
+    const existingUser = await findAuthUserByEmail(supabaseAdmin, customer.email);
+
+    if (existingUser) {
+      await ensureBuyerAccess(
+        context.company.id,
+        customer.id,
+        existingUser.id,
+        customer.email,
+        customer.name,
+      );
+
+      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: customer.email,
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (
+        error ||
+        !data.properties?.hashed_token ||
+        !data.properties?.verification_type ||
+        !data.properties?.redirect_to
+      ) {
+        throw new Error(error?.message ?? "Could not generate the portal setup link.");
+      }
+
+      return {
+        success: true,
+        portalSetupLink: buildPortalAuthCallbackLink({
+          origin: await getRequestOrigin(),
+          tokenHash: data.properties.hashed_token,
+          type: data.properties.verification_type,
+          redirectTo: data.properties.redirect_to,
+        }),
+      };
+    }
+
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "invite",
+      email: customer.email,
+      options: {
+        redirectTo,
+        data: {
+          full_name: customer.name,
+        },
+      },
+    });
+
+    if (
+      error ||
+      !data.user ||
+      !data.properties?.hashed_token ||
+      !data.properties?.verification_type ||
+      !data.properties?.redirect_to
+    ) {
+      throw new Error(error?.message ?? "Could not generate the portal setup link.");
+    }
+
+    await ensureBuyerAccess(
+      context.company.id,
+      customer.id,
+      data.user.id,
+      customer.email,
+      customer.name,
+    );
+
+    return {
+      success: true,
+      portalSetupLink: buildPortalAuthCallbackLink({
+        origin: await getRequestOrigin(),
+        tokenHash: data.properties.hashed_token,
+        type: data.properties.verification_type,
+        redirectTo: data.properties.redirect_to,
+      }),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: getActionErrorMessage(error),
+    };
+  }
+}
+
 function getActionErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
 
   return "Something went wrong. Please try again.";
+}
+
+async function sendCustomerPortalSetupEmail(
+  context: Awaited<ReturnType<typeof requireCompanyContext>>,
+  customerId: string,
+) {
+  const customer = await getCustomerById(context.company.id, customerId);
+
+  if (!customer) {
+    throw new Error("Customer not found.");
+  }
+
+  if (!customer.email) {
+    throw new Error("Add an email address to this customer first.");
+  }
+
+  if (!customer.isActive) {
+    throw new Error("Activate this customer before enabling portal login.");
+  }
+
+  const redirectTo = await buildBuyerPasswordSetupUrl();
+  const supabaseAdmin = createSupabaseAdminClient();
+  const existingUser = await findAuthUserByEmail(supabaseAdmin, customer.email);
+
+  if (existingUser) {
+    await ensureBuyerAccess(
+      context.company.id,
+      customer.id,
+      existingUser.id,
+      customer.email,
+      customer.name,
+    );
+
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(customer.email, {
+      redirectTo,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  } else {
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      customer.email,
+      {
+        redirectTo,
+        data: {
+          full_name: customer.name,
+        },
+      },
+    );
+
+    if (error || !data.user) {
+      throw new Error(error?.message ?? "Could not send the portal setup email.");
+    }
+
+    await ensureBuyerAccess(
+      context.company.id,
+      customer.id,
+      data.user.id,
+      customer.email,
+      customer.name,
+    );
+  }
+
+  await logActivity({
+    companyId: context.company.id,
+    userId: context.userId,
+    eventType: "customer.portal_setup_email_sent",
+    entityType: "customer",
+    entityId: customer.id,
+    metadata: {
+      email: customer.email,
+    },
+  });
 }
 
 async function findAuthUserByEmail(
@@ -268,4 +486,122 @@ async function findAuthUserByEmail(
   }
 
   return null;
+}
+
+async function ensureBuyerAccess(
+  companyId: string,
+  customerId: string,
+  authUserId: string,
+  email: string,
+  fullName: string,
+) {
+  const existingMembership = await db
+    .select({ role: companyUsers.role })
+    .from(companyUsers)
+    .where(
+      and(
+        eq(companyUsers.companyId, companyId),
+        eq(companyUsers.userId, authUserId),
+      ),
+    )
+    .limit(1);
+
+  await db
+    .insert(profiles)
+    .values({
+      id: authUserId,
+      email,
+      fullName,
+    })
+    .onConflictDoUpdate({
+      target: profiles.id,
+      set: {
+        email,
+        fullName,
+      },
+    });
+
+  if (!existingMembership[0]) {
+    await db.insert(companyUsers).values({
+      companyId,
+      userId: authUserId,
+      role: "buyer",
+    });
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(customers)
+      .set({
+        authUserId: null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(customers.companyId, companyId),
+          eq(customers.authUserId, authUserId),
+        ),
+      );
+
+    const [customer] = await tx
+      .update(customers)
+      .set({
+        authUserId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(customers.id, customerId),
+          eq(customers.companyId, companyId),
+        ),
+      )
+      .returning();
+
+    if (!customer) {
+      throw new Error("Customer not found.");
+    }
+  });
+}
+
+async function buildBuyerPasswordSetupUrl() {
+  const origin = await getRequestOrigin();
+  const redirectUrl = new URL("/reset-password", origin);
+
+  redirectUrl.searchParams.set("type", "buyer");
+
+  return redirectUrl.toString();
+}
+
+async function getRequestOrigin() {
+  const headerStore = await headers();
+  const explicitOrigin = headerStore.get("origin");
+
+  if (explicitOrigin) {
+    return explicitOrigin;
+  }
+
+  const host = headerStore.get("host") ?? "localhost:3000";
+  const forwardedProto = headerStore.get("x-forwarded-proto") ?? "http";
+
+  return `${forwardedProto}://${host}`;
+}
+
+function buildPortalAuthCallbackLink({
+  origin,
+  tokenHash,
+  type,
+  redirectTo,
+}: {
+  origin: string;
+  tokenHash: string;
+  type: string;
+  redirectTo: string;
+}) {
+  const callbackUrl = new URL("/auth/callback", origin);
+
+  callbackUrl.searchParams.set("token_hash", tokenHash);
+  callbackUrl.searchParams.set("type", type);
+  callbackUrl.searchParams.set("redirect_to", redirectTo);
+
+  return callbackUrl.toString();
 }

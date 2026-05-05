@@ -286,15 +286,15 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
 
               <div className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-medium text-slate-950">{copy.preview}</h3>
+                  <h3 className="text-sm font-medium text-foreground">{copy.preview}</h3>
                   <p className="text-sm text-muted-foreground">
                     {copy.previewDescription}
                   </p>
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-border/70">
-                  <table className="min-w-full divide-y divide-border bg-white text-sm">
-                    <thead className="bg-slate-50/80 text-left text-slate-600">
+                  <table className="min-w-full divide-y divide-border bg-card/90 text-sm text-foreground">
+                    <thead className="bg-muted/70 text-left text-muted-foreground">
                       <tr>
                         <PreviewHeader
                           label={copy.row}
@@ -391,7 +391,7 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
             </div>
 
             {result.warnings.length > 0 ? (
-              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
                 <p className="font-medium">{copy.warnings}</p>
                 <ul className="mt-2 list-disc pl-5">
                   {result.warnings.map((warning) => (
@@ -426,7 +426,7 @@ function PreviewHeader({
     <th className="px-4 py-3 font-medium">
       <button
         type="button"
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
         onClick={() => onSortChange(getNextPreviewSort(sortKey, activeSort))}
       >
         {label}
@@ -517,9 +517,9 @@ function sortPreviewRows(rows: ImportedProductRowInput[], sort: PreviewSort) {
 
 function SummaryTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-white p-4">
+    <div className="rounded-2xl border border-border/70 bg-card/90 p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-slate-950">{value}</p>
+      <p className="mt-2 text-3xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }

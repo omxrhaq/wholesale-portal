@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OrderEditForm } from "@/components/orders/order-edit-form";
 import { OrderStatusForm } from "@/components/orders/order-status-form";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
-import { OrderTimeline } from "@/components/orders/order-timeline";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompanyContext } from "@/lib/companies/context";
@@ -34,6 +34,7 @@ export default async function OrderDetailPage({
   }
 
   const sortedItems = sortOrderItems(order.items, selectedSort);
+  const latestStatusActor = getLatestStatusActor(order.timeline);
 
   return (
     <section className="space-y-6">
@@ -42,7 +43,7 @@ export default async function OrderDetailPage({
           <p className="text-sm uppercase tracking-[0.18em] text-muted-foreground">
             {t.orderDetail}
           </p>
-          <h2 className="text-3xl font-semibold text-slate-950">
+          <h2 className="text-3xl font-semibold text-foreground">
             {order.id.slice(0, 8).toUpperCase()}
           </h2>
         </div>
@@ -51,7 +52,7 @@ export default async function OrderDetailPage({
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-[minmax(380px,520px)_minmax(0,1fr)]">
         <Card>
           <CardHeader>
             <CardDescription>{t.status}</CardDescription>
@@ -61,119 +62,159 @@ export default async function OrderDetailPage({
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {t.lastUpdatedOn} {formatDate(order.updatedAt, locale)}.
+              {t.lastUpdatedOn} {formatDate(order.updatedAt, locale)}
+              {latestStatusActor ? ` ${t.by} ${latestStatusActor}` : ""}.
             </p>
-            <OrderStatusForm orderId={order.id} currentStatus={order.status} locale={locale} />
+            <OrderStatusForm
+              orderId={order.id}
+              currentStatus={order.status}
+              timeline={order.timeline}
+              locale={locale}
+            />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardDescription>{t.customer}</CardDescription>
-            <CardTitle className="text-xl">{order.customerName}</CardTitle>
+            <CardTitle>{t.summary}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1 text-sm text-muted-foreground">
-            <p>{order.customerEmail ?? t.noEmail}</p>
-            <p>{order.customerPhone ?? t.noPhone}</p>
-          </CardContent>
-        </Card>
+          <CardContent className="space-y-5">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                {t.customer}
+              </p>
+              <p className="text-base font-semibold text-foreground">
+                {order.customerName}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {order.customerEmail ?? t.noEmail}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {order.customerPhone ?? t.noPhone}
+              </p>
+            </div>
 
-        <Card>
-          <CardHeader>
-            <CardDescription>{t.totalAmount}</CardDescription>
-            <CardTitle className="text-3xl">
-              {formatCurrency(order.totalAmount, locale)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {t.createdOn} {formatDate(order.createdAt, locale)}.
-            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                  {t.totalAmount}
+                </p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {formatCurrency(order.totalAmount, locale)}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                  {t.createdOn}
+                </p>
+                <p className="text-sm text-foreground/80">
+                  {formatDate(order.createdAt, locale)}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.orderItems}</CardTitle>
-          <CardDescription>
-            {t.orderItemsDescription}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-hidden rounded-2xl border border-border/70">
-            <table className="min-w-full divide-y divide-border bg-white text-sm">
-              <thead className="bg-slate-50/80 text-left text-slate-600">
-                <tr>
-                  <SortableHeader
-                    label={t.product}
-                    orderId={order.id}
-                    sortKey="product"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.quantity}
-                    orderId={order.id}
-                    sortKey="quantity"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.unitPrice}
-                    orderId={order.id}
-                    sortKey="unit_price"
-                    activeSort={selectedSort}
-                  />
-                  <SortableHeader
-                    label={t.lineTotal}
-                    orderId={order.id}
-                    sortKey="line_total"
-                    activeSort={selectedSort}
-                  />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/70">
-                {sortedItems.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-4 font-medium text-slate-950">
-                      {item.productNameSnapshot}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">{item.quantity}</td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {formatCurrency(item.unitPrice, locale)}
-                    </td>
-                    <td className="px-4 py-4 text-slate-700">
-                      {formatCurrency(item.lineTotal, locale)}
-                    </td>
+      {order.status === "new" ? (
+        <Card>
+          <CardContent className="p-6">
+            <OrderEditForm
+              orderId={order.id}
+              locale={locale}
+              initialNotes={order.notes}
+              initialItems={order.items.map((item) => ({
+                id: item.id,
+                productNameSnapshot: item.productNameSnapshot,
+                unitPrice: item.unitPrice,
+                quantity: item.quantity,
+              }))}
+              copy={{
+                editTitle: t.editTitle,
+                editDescription: t.editDescription,
+                quantity: t.quantity,
+                unitPrice: t.unitPrice,
+                lineTotal: t.lineTotal,
+                notes: t.notes,
+                draftTotal: t.draftTotal,
+                saveDraft: t.saveDraft,
+                savingDraft: t.savingDraft,
+                resetChanges: t.resetChanges,
+                draftSaved: t.draftSaved,
+                saveFailed: t.saveFailed,
+              }}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t.orderItems}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-hidden rounded-2xl border border-border/70">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
+                  <tr>
+                    <SortableHeader
+                      label={t.product}
+                      orderId={order.id}
+                      sortKey="product"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.quantity}
+                      orderId={order.id}
+                      sortKey="quantity"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.unitPrice}
+                      orderId={order.id}
+                      sortKey="unit_price"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
+                      label={t.lineTotal}
+                      orderId={order.id}
+                      sortKey="line_total"
+                      activeSort={selectedSort}
+                    />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {order.notes ? (
-            <div className="mt-6 rounded-2xl border border-border/70 bg-muted/30 p-4">
-              <p className="text-sm font-medium text-slate-950">{t.notes}</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                {order.notes}
-              </p>
+                </thead>
+                <tbody className="divide-y divide-border/70">
+                  {sortedItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-accent/45">
+                      <td className="px-4 py-4 font-medium text-foreground">
+                        {item.productNameSnapshot}
+                      </td>
+                      <td className="px-4 py-4 text-foreground/80">{item.quantity}</td>
+                      <td className="px-4 py-4 text-foreground/80">
+                        {formatCurrency(item.unitPrice, locale)}
+                      </td>
+                      <td className="px-4 py-4 text-foreground/80">
+                        {formatCurrency(item.lineTotal, locale)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ) : null}
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.timeline}</CardTitle>
-          <CardDescription>{t.timelineDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <OrderTimeline
-            entries={order.timeline}
-            locale={locale}
-            copy={t}
-          />
-        </CardContent>
-      </Card>
+            {order.notes ? (
+              <div className="mt-6 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                <p className="text-sm font-medium text-foreground">{t.notes}</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {order.notes}
+                </p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
     </section>
   );
 }
@@ -208,7 +249,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildOrderDetailUrl(orderId, nextSort)}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>
@@ -254,6 +295,31 @@ function getNextSort(
   }
 
   return desc;
+}
+
+function getLatestStatusActor(
+  timeline: Array<{
+    type: "created" | "status_changed";
+    actor: {
+      name: string;
+      email: string | null;
+    };
+  }>,
+) {
+  const statusChange = [...timeline]
+    .reverse()
+    .find((entry) => entry.type === "status_changed");
+
+  if (statusChange) {
+    return statusChange.actor.name || statusChange.actor.email;
+  }
+
+  const createdEntry = timeline[0];
+  if (!createdEntry) {
+    return null;
+  }
+
+  return createdEntry.actor.name || createdEntry.actor.email;
 }
 
 function sortOrderItems<T extends {
@@ -303,10 +369,12 @@ function getOrderDetailCopy(locale: AppLocale) {
       backToOrders: "Back to orders",
       status: "Status",
       lastUpdatedOn: "Last updated on",
+      by: "by",
       customer: "Customer",
       noEmail: "No email",
       noPhone: "No phone",
       totalAmount: "Total amount",
+      summary: "Summary",
       createdOn: "Created on",
       orderItems: "Order items",
       orderItemsDescription:
@@ -316,6 +384,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Unit price",
       lineTotal: "Line total",
       notes: "Notes",
+      editTitle: "Edit order",
+      editDescription: "While the status is still new, you can adjust notes and line quantities here.",
+      draftTotal: "Updated total",
+      saveDraft: "Save order",
+      savingDraft: "Saving order...",
+      resetChanges: "Reset changes",
+      draftSaved: "Order updated.",
+      saveFailed: "Failed to update order.",
       timeline: "Timeline",
       timelineDescription: "Track who created the order and every valid status change after that.",
       orderCreated: "Order created",
@@ -330,10 +406,12 @@ function getOrderDetailCopy(locale: AppLocale) {
       backToOrders: "Terug naar orders",
       status: "Status",
       lastUpdatedOn: "Laatst bijgewerkt op",
+      by: "door",
       customer: "Klant",
       noEmail: "Geen e-mail",
       noPhone: "Geen telefoon",
       totalAmount: "Totaalbedrag",
+      summary: "Samenvatting",
       createdOn: "Aangemaakt op",
       orderItems: "Orderregels",
       orderItemsDescription:
@@ -343,6 +421,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Stukprijs",
       lineTotal: "Lijntotaal",
       notes: "Notities",
+      editTitle: "Order bewerken",
+      editDescription: "Zolang de status nog new is, kun je hier notities en aantallen aanpassen.",
+      draftTotal: "Nieuw totaal",
+      saveDraft: "Order opslaan",
+      savingDraft: "Order opslaan...",
+      resetChanges: "Wijzigingen resetten",
+      draftSaved: "Order bijgewerkt.",
+      saveFailed: "Order bijwerken mislukt.",
       timeline: "Tijdlijn",
       timelineDescription: "Volg wie de order heeft aangemaakt en elke geldige statuswijziging daarna.",
       orderCreated: "Order aangemaakt",
@@ -357,10 +443,12 @@ function getOrderDetailCopy(locale: AppLocale) {
       backToOrders: "Retour aux commandes",
       status: "Statut",
       lastUpdatedOn: "Derniere mise a jour le",
+      by: "par",
       customer: "Client",
       noEmail: "Pas d'e-mail",
       noPhone: "Pas de telephone",
       totalAmount: "Montant total",
+      summary: "Resume",
       createdOn: "Creee le",
       orderItems: "Lignes de commande",
       orderItemsDescription:
@@ -370,6 +458,14 @@ function getOrderDetailCopy(locale: AppLocale) {
       unitPrice: "Prix unitaire",
       lineTotal: "Total ligne",
       notes: "Notes",
+      editTitle: "Modifier la commande",
+      editDescription: "Tant que le statut est encore new, vous pouvez ajuster ici les notes et les quantites.",
+      draftTotal: "Nouveau total",
+      saveDraft: "Enregistrer la commande",
+      savingDraft: "Enregistrement...",
+      resetChanges: "Reinitialiser",
+      draftSaved: "Commande mise a jour.",
+      saveFailed: "Impossible de mettre la commande a jour.",
       timeline: "Chronologie",
       timelineDescription: "Suivez qui a cree la commande et chaque changement de statut valide ensuite.",
       orderCreated: "Commande creee",

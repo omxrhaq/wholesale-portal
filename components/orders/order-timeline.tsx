@@ -39,7 +39,7 @@ export function OrderTimeline({
           return (
             <div key={entry.id} className="flex gap-3">
               <div className="flex flex-col items-center">
-                <div className="rounded-xl bg-slate-100 p-1.5 text-slate-700">
+                <div className="rounded-xl bg-muted/70 p-1.5 text-foreground/80">
                   {entry.type === "created" ? (
                     <PackageCheck className="size-3.5" />
                   ) : (
@@ -51,8 +51,8 @@ export function OrderTimeline({
                 ) : null}
               </div>
 
-              <div className="flex-1 rounded-xl border border-border/70 bg-white px-3 py-3">
-                <p className="text-sm font-medium text-slate-950">
+              <div className="flex-1 rounded-xl border border-border/70 bg-card/90 px-3 py-3">
+                <p className="text-sm font-medium text-foreground">
                   {description}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">

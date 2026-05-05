@@ -30,12 +30,7 @@ export async function requestPasswordResetAction(
   }
 
   const supabase = await createSupabaseServerClient();
-  const origin = await getRequestOrigin();
-  const redirectUrl = new URL("/auth/callback", origin);
-  redirectUrl.searchParams.set(
-    "next",
-    `/reset-password?type=${parsed.data.loginType}`,
-  );
+  const redirectUrl = await buildResetPasswordUrl(parsed.data.loginType);
 
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
@@ -67,4 +62,13 @@ async function getRequestOrigin() {
   const forwardedProto = headerStore.get("x-forwarded-proto") ?? "http";
 
   return `${forwardedProto}://${host}`;
+}
+
+async function buildResetPasswordUrl(loginType: "wholesaler" | "buyer") {
+  const origin = await getRequestOrigin();
+  const redirectUrl = new URL("/reset-password", origin);
+
+  redirectUrl.searchParams.set("type", loginType);
+
+  return redirectUrl.toString();
 }

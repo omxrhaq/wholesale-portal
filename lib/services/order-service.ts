@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
 import { canTransitionOrderStatus } from "@/lib/orders";
+import { orderEditSchema, type OrderEditInput } from "@/lib/validation/order-edit";
 
 type ListOrdersOptions = {
   companyId: string;
@@ -385,6 +386,139 @@ export async function updateOrderStatus(
   return {
     id: orderId,
     status: nextStatus,
+  };
+}
+
+export async function updateOrderDraft(
+  context: CompanyContext,
+  orderId: string,
+  rawInput: OrderEditInput,
+) {
+  const input = orderEditSchema.parse(rawInput);
+
+  const [currentOrder] = await db
+    .select({
+      id: orders.id,
+      status: orders.status,
+      notes: orders.notes,
+    })
+    .from(orders)
+    .where(and(eq(orders.id, orderId), eq(orders.companyId, context.company.id)))
+    .limit(1);
+
+  if (!currentOrder) {
+    throw new Error("Order not found.");
+  }
+
+  if (currentOrder.status !== "new") {
+    throw new Error("Only orders with status new can still be edited.");
+  }
+
+  const existingItems = await db
+    .select({
+      id: orderItems.id,
+      productId: orderItems.productId,
+      productNameSnapshot: orderItems.productNameSnapshot,
+      unitPrice: orderItems.unitPrice,
+      quantity: orderItems.quantity,
+    })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
+
+  const existingIds = new Set(existingItems.map((item) => item.id));
+
+  if (
+    input.items.length !== existingItems.length ||
+    input.items.some((item) => !existingIds.has(item.id))
+  ) {
+    throw new Error("Order lines changed before this update. Refresh and try again.");
+  }
+
+  const submittedById = new Map(input.items.map((item) => [item.id, item.quantity]));
+  const nextItems = existingItems
+    .map((item) => {
+      const quantity = submittedById.get(item.id);
+
+      if (typeof quantity !== "number") {
+        throw new Error("Missing order line update.");
+      }
+
+      return {
+        ...item,
+        quantity,
+        lineTotal: Number((item.unitPrice * quantity).toFixed(2)),
+      };
+    })
+    .filter((item) => item.quantity > 0);
+
+  if (nextItems.length === 0) {
+    throw new Error("Keep at least one order line with quantity above zero.");
+  }
+
+  const totalAmount = Number(
+    nextItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2),
+  );
+  const nextNotes = input.notes?.trim() ? input.notes.trim() : null;
+  const removedItemIds = existingItems
+    .filter((item) => submittedById.get(item.id) === 0)
+    .map((item) => item.id);
+
+  await db.transaction(async (tx) => {
+    const [updatedOrder] = await tx
+      .update(orders)
+      .set({
+        notes: nextNotes,
+        totalAmount,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orders.id, orderId),
+          eq(orders.companyId, context.company.id),
+          eq(orders.status, "new"),
+        ),
+      )
+      .returning({ id: orders.id });
+
+    if (!updatedOrder) {
+      throw new Error("Order changed before this update. Refresh and try again.");
+    }
+
+    for (const item of nextItems) {
+      await tx
+        .update(orderItems)
+        .set({
+          quantity: item.quantity,
+          lineTotal: item.lineTotal,
+        })
+        .where(and(eq(orderItems.id, item.id), eq(orderItems.orderId, orderId)));
+    }
+
+    if (removedItemIds.length > 0) {
+      await tx
+        .delete(orderItems)
+        .where(and(eq(orderItems.orderId, orderId), inArray(orderItems.id, removedItemIds)));
+    }
+
+    await tx.insert(activityLogs).values({
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "order.updated",
+      entityType: "order",
+      entityId: orderId,
+      metadata: {
+        actorRole: context.companyUser.role,
+        itemCount: nextItems.length,
+        removedItemCount: removedItemIds.length,
+        noteChanged: currentOrder.notes !== nextNotes,
+      },
+    });
+  });
+
+  return {
+    id: orderId,
+    totalAmount,
+    notes: nextNotes,
   };
 }
 

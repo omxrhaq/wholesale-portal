@@ -63,7 +63,7 @@ export function LoginForm({
           <Label htmlFor="password">{copy.password}</Label>
           <Link
             href={forgotPasswordHref}
-            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-slate-950 hover:underline"
+            className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
           >
             {copy.forgotPassword}
           </Link>

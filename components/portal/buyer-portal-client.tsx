@@ -6,7 +6,7 @@ import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "r
 import { placePortalOrderAction } from "@/app/portal/actions";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -266,14 +266,8 @@ export function BuyerPortalClient({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="space-y-2">
+        <CardHeader>
           <CardTitle>{copy.catalog}</CardTitle>
-          <CardDescription>
-            {copy.orderingAs} <strong>{customer.name}</strong>
-            {customer.email ? (
-              <span className="text-muted-foreground"> ({customer.email})</span>
-            ) : null}
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <input
@@ -313,8 +307,7 @@ export function BuyerPortalClient({
             <EmptyState
               icon={Search}
               title={copy.noProductsFound}
-              description={copy.description}
-              className="border-border/70 bg-white/90 py-12"
+              className="border-border/70 bg-card/88 py-12"
               actions={
                 search || selectedCategory !== "all" ? (
                   <Button type="button" variant="outline" onClick={resetCatalogFilters}>
@@ -325,8 +318,8 @@ export function BuyerPortalClient({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium">{copy.productName}</th>
                     <th className="px-4 py-3 font-medium">{copy.category}</th>
@@ -337,17 +330,17 @@ export function BuyerPortalClient({
                 </thead>
                 <tbody className="divide-y divide-border/70">
                   {filteredProducts.map((product) => (
-                    <tr key={product.id}>
+                    <tr key={product.id} className="hover:bg-accent/45">
                       <td className="px-4 py-4">
-                        <div className="font-medium text-slate-950">{product.name}</div>
+                        <div className="font-medium text-foreground">{product.name}</div>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {product.categoryName ?? copy.uncategorized}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatCurrency(product.price, locale)}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{product.unit}</td>
+                      <td className="px-4 py-4 text-foreground/80">{product.unit}</td>
                       <td className="px-4 py-4">
                         <input
                           type="number"
@@ -374,7 +367,6 @@ export function BuyerPortalClient({
         <Card>
           <CardHeader>
             <CardTitle>{copy.cart}</CardTitle>
-            <CardDescription>{copy.cartDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
@@ -382,7 +374,6 @@ export function BuyerPortalClient({
                 <EmptyState
                   icon={ShoppingCart}
                   title={copy.noProductsSelected}
-                  description={copy.cartDescription}
                   className="border-0 bg-transparent px-0 py-4 shadow-none"
                 />
               ) : (
@@ -390,18 +381,18 @@ export function BuyerPortalClient({
                   {cartItems.map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-slate-950">{item.name}</p>
+                        <p className="text-sm font-medium text-foreground">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {item.quantity} x {formatCurrency(item.price, locale)}
                         </p>
                       </div>
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-foreground">
                         {formatCurrency(item.price * item.quantity, locale)}
                       </p>
                     </div>
                   ))}
                   <div className="border-t border-border pt-3">
-                    <p className="flex items-center justify-between text-sm font-semibold text-slate-950">
+                    <p className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>{copy.total}</span>
                       <span>{formatCurrency(total, locale)}</span>
                     </p>
@@ -411,7 +402,7 @@ export function BuyerPortalClient({
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="portal-notes" className="text-sm font-medium text-slate-950">
+              <label htmlFor="portal-notes" className="text-sm font-medium text-foreground">
                 {copy.optionalNote}
               </label>
               <textarea
@@ -445,42 +436,32 @@ export function BuyerPortalClient({
         <Card>
           <CardHeader>
             <CardTitle>{copy.orderHistory}</CardTitle>
-            <CardDescription>{copy.historyDescription}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {orderHistory.length === 0 ? (
               <EmptyState
                 icon={Clock3}
                 title={copy.noPreviousOrders}
-                description={copy.historyDescription}
-                className="border-border/70 bg-white/90 py-12"
+                className="border-border/70 bg-card/88 py-12"
               />
             ) : (
               orderHistory.map((order) => (
                 <div
                   key={order.id}
-                  className="rounded-xl border border-border/70 bg-white px-3 py-3"
+                  className="rounded-xl border border-border/70 bg-card/90 px-3 py-3"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-950">
+                      <p className="text-sm font-medium text-foreground">
                         {order.id.slice(0, 8).toUpperCase()}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {formatDate(order.createdAt, locale)}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTemplate(
-                          order.items.length === 1
-                            ? copy.lineCountSingular
-                            : copy.lineCountPlural,
-                          { count: String(order.items.length) },
-                        )}
-                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <OrderStatusBadge status={order.status} locale={locale} />
-                      <p className="text-sm font-medium text-slate-900">
+                      <p className="text-sm font-medium text-foreground">
                         {formatCurrency(order.totalAmount, locale)}
                       </p>
                       <Button

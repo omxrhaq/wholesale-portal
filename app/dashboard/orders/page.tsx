@@ -127,16 +127,16 @@ export default async function OrdersPage({
                   href={buildOrdersUrl({ ...params, view: view.key }, 1)}
                   className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition ${
                     isActive
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-border bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900"
+                      ? "border-primary/15 bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                      : "border-border bg-card/88 text-foreground/80 hover:border-primary/20 hover:text-foreground"
                   }`}
                 >
                   <span>{view.label}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${
                       isActive
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-100 text-slate-600"
+                        ? "bg-white/18 text-white"
+                        : "bg-secondary text-muted-foreground"
                     }`}
                   >
                     {view.count}
@@ -157,7 +157,7 @@ export default async function OrdersPage({
               icon={query || selectedView !== "all" ? Search : ShoppingCart}
               title={query || selectedView !== "all" ? t.noOrdersForFilters : t.noOrdersYet}
               description={query || selectedView !== "all" ? t.cardDescription : t.openDescription}
-              className="border-border/70 bg-white/90 py-14"
+              className="border-border/70 bg-card/88 py-14"
               actions={
                 query || selectedView !== "all" ? (
                   <Button asChild variant="outline">
@@ -168,8 +168,8 @@ export default async function OrdersPage({
             />
           ) : (
             <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-white text-sm">
-                <thead className="bg-slate-50/80 text-left text-slate-600">
+              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                <thead className="bg-muted/70 text-left text-muted-foreground">
                   <tr>
                     <SortableHeader
                       label={t.order}
@@ -213,21 +213,21 @@ export default async function OrdersPage({
                       sortKey="updated"
                       activeSort={selectedSort}
                     />
-                    <th className="px-4 py-3 font-medium text-right">{t.actions}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
                   {orders.rows.map((order) => (
-                    <tr key={order.id} className="align-top hover:bg-slate-50/70">
+                    <tr key={order.id} className="align-top hover:bg-accent/45">
                       <td className="px-4 py-4">
                         <Link
                           href={`/dashboard/orders/${order.id}`}
-                          className="block font-medium text-slate-950 underline-offset-4 hover:underline"
+                          className="block font-medium text-foreground underline-offset-4 hover:underline"
                         >
                           {order.id.slice(0, 8).toUpperCase()}
                         </Link>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         <div>{order.customerName}</div>
                         <div className="text-xs text-muted-foreground">
                           {order.customerEmail ?? t.noEmail}
@@ -236,17 +236,17 @@ export default async function OrdersPage({
                           {order.customerPhone ?? t.noPhone}
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-slate-700">{order.itemCount}</td>
+                      <td className="px-4 py-4 text-foreground/80">{order.itemCount}</td>
                       <td className="px-4 py-4">
                         <OrderStatusBadge status={order.status} locale={locale} />
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatCurrency(order.totalAmount, locale)}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(order.createdAt, locale)}
                       </td>
-                      <td className="px-4 py-4 text-slate-700">
+                      <td className="px-4 py-4 text-foreground/80">
                         {formatDate(order.updatedAt, locale)}
                       </td>
                       <td className="px-4 py-4">

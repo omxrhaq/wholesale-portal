@@ -98,7 +98,7 @@ export function PasswordUpdateForm({
       ) : null}
 
       {state.success ? (
-        <p className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p className="rounded-xl border border-sky-200/90 bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:border-sky-800/80 dark:bg-sky-950/35 dark:text-sky-100">
           {state.success}
         </p>
       ) : null}

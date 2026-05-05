@@ -3,8 +3,9 @@ import Link from "next/link";
 import { requestPasswordResetAction } from "@/app/forgot-password/actions";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPasswordCopy } from "@/lib/i18n-copy";
+import { getCommonCopy, getPasswordCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
 
 export default async function ForgotPasswordPage({
@@ -16,18 +17,27 @@ export default async function ForgotPasswordPage({
   const loginType = params.type === "buyer" ? "buyer" : "wholesaler";
   const locale = await getUserLocale();
   const t = getPasswordCopy(locale);
+  const common = getCommonCopy(locale);
   const backHref = loginType === "buyer" ? "/portal/login" : "/login";
   const backLabel =
     loginType === "buyer" ? t.backToBuyerLogin : t.backToWholesalerLogin;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(217,119,6,0.14),_transparent_35%),linear-gradient(180deg,_#fffaf1_0%,_#f7f2e8_48%,_#efe5d4_100%)] px-6 py-10 text-slate-950">
+    <main className="min-h-screen bg-background px-6 py-10 text-foreground">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-md place-items-center">
-        <Card className="w-full border-white/70 bg-white/90 backdrop-blur">
+        <Card className="w-full">
           <CardHeader className="space-y-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle>{t.forgotTitle}</CardTitle>
-              <LanguageSwitcher currentLocale={locale} />
+              <div className="flex items-center gap-2">
+                <ThemeToggle
+                  label={common.theme}
+                  lightLabel={common.lightMode}
+                  darkLabel={common.darkMode}
+                  systemLabel={common.systemMode}
+                />
+                <LanguageSwitcher currentLocale={locale} />
+              </div>
             </div>
             <CardDescription>{t.forgotDescription}</CardDescription>
           </CardHeader>
@@ -39,7 +49,7 @@ export default async function ForgotPasswordPage({
             />
             <Link
               href={backHref}
-              className="block text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-slate-950 hover:underline"
+              className="block text-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
               {backLabel}
             </Link>

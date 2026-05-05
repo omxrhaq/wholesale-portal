@@ -95,12 +95,12 @@ export default async function DashboardPage({
                 icon={ShoppingCart}
                 title={t.noOrders}
                 description={t.recentOrdersDescription}
-                className="border-border/70 bg-white/90 py-14"
+                className="border-border/70 bg-card/88 py-14"
               />
             ) : (
               <div className="overflow-hidden rounded-2xl border border-border/70">
-                <table className="min-w-full divide-y divide-border bg-white text-sm">
-                  <thead className="bg-slate-50/80 text-left text-slate-600">
+                <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                  <thead className="bg-muted/70 text-left text-muted-foreground">
                     <tr>
                       <SortableHeader
                         label={t.customer}
@@ -130,13 +130,13 @@ export default async function DashboardPage({
                   </thead>
                   <tbody className="divide-y divide-border/70">
                     {latestOrders.map((order) => (
-                      <tr key={order.id} className="hover:bg-slate-50/80">
+                      <tr key={order.id} className="hover:bg-accent/45">
                         <td className="px-4 py-4">
                           <Link
                             href={`/dashboard/orders/${order.id}`}
                             className="block"
                           >
-                            <div className="font-medium text-slate-950">
+                            <div className="font-medium text-foreground">
                               {order.customerName}
                             </div>
                             <div className="text-xs text-muted-foreground">
@@ -152,7 +152,7 @@ export default async function DashboardPage({
                             <OrderStatusBadge status={order.status} locale={locale} />
                           </Link>
                         </td>
-                        <td className="px-4 py-4 text-slate-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           <Link
                             href={`/dashboard/orders/${order.id}`}
                             className="block"
@@ -160,7 +160,7 @@ export default async function DashboardPage({
                             {formatCurrency(order.totalAmount, locale)}
                           </Link>
                         </td>
-                        <td className="px-4 py-4 text-slate-700">
+                        <td className="px-4 py-4 text-foreground/80">
                           <Link
                             href={`/dashboard/orders/${order.id}`}
                             className="block"
@@ -197,7 +197,7 @@ function MetricCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardDescription>{label}</CardDescription>
-          <Icon className="size-5 text-amber-700" />
+          <Icon className="size-5 text-primary" />
         </div>
         <CardTitle className="text-3xl">{value}</CardTitle>
       </CardHeader>
@@ -228,7 +228,7 @@ function SortableHeader({
     <th className="px-4 py-3 font-medium">
       <Link
         href={buildDashboardUrl({ ...params, recentSort: nextSort })}
-        className="inline-flex items-center gap-1 hover:text-slate-900"
+        className="inline-flex items-center gap-1 hover:text-foreground"
       >
         {label}
         <span aria-hidden>{indicator}</span>

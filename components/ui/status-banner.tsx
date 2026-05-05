@@ -20,23 +20,23 @@ const variantStyles: Record<
 > = {
   success: {
     icon: CheckCircle2,
-    className: "border-emerald-300 bg-emerald-50 text-emerald-900",
-    iconClassName: "text-emerald-700",
+    className: "border-sky-200/90 bg-sky-50 text-sky-900 dark:border-sky-800/80 dark:bg-sky-950/35 dark:text-sky-100",
+    iconClassName: "text-sky-700 dark:text-sky-300",
   },
   warning: {
     icon: TriangleAlert,
-    className: "border-amber-300 bg-amber-50 text-amber-900",
-    iconClassName: "text-amber-700",
+    className: "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100",
+    iconClassName: "text-amber-700 dark:text-amber-300",
   },
   error: {
     icon: CircleAlert,
-    className: "border-destructive/20 bg-destructive/10 text-destructive",
-    iconClassName: "text-destructive",
+    className: "border-destructive/20 bg-destructive/10 text-destructive dark:border-destructive/35 dark:bg-destructive/15 dark:text-red-100",
+    iconClassName: "text-destructive dark:text-red-300",
   },
   info: {
     icon: Info,
-    className: "border-sky-300 bg-sky-50 text-sky-900",
-    iconClassName: "text-sky-700",
+    className: "border-blue-200/90 bg-blue-50 text-blue-900 dark:border-blue-800/80 dark:bg-blue-950/30 dark:text-blue-100",
+    iconClassName: "text-blue-700 dark:text-blue-300",
   },
 };
 
