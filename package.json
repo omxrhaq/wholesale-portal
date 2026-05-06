@@ -16,6 +16,7 @@
     "db:studio": "drizzle-kit studio",
     "db:reset": "node scripts/reset.mjs",
     "db:seed": "node scripts/seed.mjs",
+    "db:seed:activity-demo": "node scripts/seed-activity-demo.mjs",
     "db:fresh": "npm run db:reset && npm run db:seed"
   },
   "dependencies": {

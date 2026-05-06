@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 
 import { updateCustomerAction } from "@/app/dashboard/customers/actions";
+import { ActivityHistory } from "@/components/activity/activity-history";
 import { CustomerForm } from "@/components/customers/customer-form";
 import { CustomerPortalLoginForm } from "@/components/customers/customer-portal-login-form";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { getCommonCopy, getCustomerCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
+import { listActivityForEntity } from "@/lib/services/activity-log-service";
 import { getCustomerById } from "@/lib/services/customer-service";
 
 export default async function EditCustomerPage({
@@ -23,7 +25,10 @@ export default async function EditCustomerPage({
     ...getCommonCopy(locale),
     ...getCustomerCopy(locale),
   };
-  const customer = await getCustomerById(context.company.id, id);
+  const [customer, activityEntries] = await Promise.all([
+    getCustomerById(context.company.id, id),
+    listActivityForEntity(context.company.id, "customer", id),
+  ]);
 
   if (!customer) {
     notFound();
@@ -44,12 +49,33 @@ export default async function EditCustomerPage({
         submitAction={action}
         copy={copy}
       />
-      <CustomerPortalLoginForm
-        customerId={customer.id}
-        customerEmail={customer.email}
-        isActive={customer.isActive}
-        copy={copy}
-      />
+      <div className="space-y-6">
+        <CustomerPortalLoginForm
+          customerId={customer.id}
+          customerEmail={customer.email}
+          isActive={customer.isActive}
+          copy={copy}
+        />
+        <ActivityHistory
+          entries={activityEntries}
+          locale={locale}
+          title={locale === "nl" ? "Geschiedenis" : locale === "fr" ? "Historique" : "Activity history"}
+          description={
+            locale === "nl"
+              ? "Bekijk recente wijzigingen wanneer nodig."
+              : locale === "fr"
+                ? "Consultez les dernieres modifications si necessaire."
+                : "Review recent changes only when needed."
+          }
+          emptyLabel={
+            locale === "nl"
+              ? "Nog geen geschiedenis voor deze klant."
+              : locale === "fr"
+                ? "Aucun historique pour ce client."
+                : "No activity yet for this customer."
+          }
+        />
+      </div>
     </section>
   );
 }

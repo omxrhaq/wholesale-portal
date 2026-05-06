@@ -128,6 +128,7 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run db:migrate` - `drizzle-kit migrate`
 - `npm run db:reset` - `node scripts/reset.mjs`
 - `npm run db:seed` - `node scripts/seed.mjs`
+- `npm run db:seed:activity-demo` - `node scripts/seed-activity-demo.mjs`
 - `npm run db:studio` - `drizzle-kit studio`
 - `npm run dev` - `next dev`
 - `npm run docs:check` - `node scripts/update-readme.mjs --check`

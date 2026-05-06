@@ -316,6 +316,17 @@ export async function generateCustomerPortalSetupLinkAction(
         throw new Error(error?.message ?? "Could not generate the portal setup link.");
       }
 
+      await logActivity({
+        companyId: context.company.id,
+        userId: context.userId,
+        eventType: "customer.portal_setup_link_generated",
+        entityType: "customer",
+        entityId: customer.id,
+        metadata: {
+          email: customer.email,
+        },
+      });
+
       return {
         success: true,
         portalSetupLink: buildPortalAuthCallbackLink({
@@ -355,6 +366,17 @@ export async function generateCustomerPortalSetupLinkAction(
       customer.email,
       customer.name,
     );
+
+    await logActivity({
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "customer.portal_setup_link_generated",
+      entityType: "customer",
+      entityId: customer.id,
+      metadata: {
+        email: customer.email,
+      },
+    });
 
     return {
       success: true,

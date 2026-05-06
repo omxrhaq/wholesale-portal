@@ -3,7 +3,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { productCategories, products } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
-import { logActivity } from "@/lib/services/activity-log-service";
+import { buildFieldChanges, logActivity } from "@/lib/services/activity-log-service";
 import {
   normalizeProductCategoryName,
   productCategorySchema,
@@ -145,7 +145,9 @@ export async function createProductCategory(
     eventType: "product_category.created",
     entityType: "product_category",
     entityId: category.id,
-    metadata: { name: category.name },
+    metadata: {
+      changes: [{ field: "name", before: null, after: category.name }],
+    },
   });
 
   return category;
@@ -161,6 +163,12 @@ export async function updateProductCategory(
 
   if (!normalizedName) {
     throw new Error("Category name is required.");
+  }
+
+  const currentCategory = await getProductCategoryById(context.company.id, categoryId);
+
+  if (!currentCategory) {
+    throw new Error("Category not found.");
   }
 
   const [category] = await db
@@ -182,17 +190,19 @@ export async function updateProductCategory(
       updatedAt: productCategories.updatedAt,
     });
 
-  if (!category) {
-    throw new Error("Category not found.");
-  }
-
   await logActivity({
     companyId: context.company.id,
     userId: context.userId,
     eventType: "product_category.updated",
     entityType: "product_category",
     entityId: category.id,
-    metadata: { name: category.name },
+    metadata: {
+      changes: buildFieldChanges(
+        { name: currentCategory.name },
+        { name: category.name },
+        [{ key: "name" }],
+      ),
+    },
   });
 
   return category;
@@ -228,7 +238,19 @@ export async function createProduct(
     eventType: "product.created",
     entityType: "product",
     entityId: product.id,
-    metadata: { sku: product.sku, categoryId },
+    metadata: {
+      sku: product.sku,
+      categoryId,
+      changes: [
+        { field: "name", before: null, after: product.name },
+        { field: "sku", before: null, after: product.sku },
+        { field: "categoryName", before: null, after: input.categoryName || null },
+        { field: "description", before: null, after: product.description ?? null },
+        { field: "unit", before: null, after: product.unit },
+        { field: "price", before: null, after: product.price },
+        { field: "isActive", before: null, after: product.isActive },
+      ],
+    },
   });
 
   return product;
@@ -240,6 +262,12 @@ export async function updateProduct(
   rawInput: ProductInput,
 ) {
   const input = productSchema.parse(rawInput);
+  const currentProduct = await getProductById(context.company.id, productId);
+
+  if (!currentProduct) {
+    throw new Error("Product not found.");
+  }
+
   const categoryId = await resolveProductCategoryId(
     context.company.id,
     input.categoryName,
@@ -260,17 +288,45 @@ export async function updateProduct(
     .where(and(eq(products.id, productId), eq(products.companyId, context.company.id)))
     .returning();
 
-  if (!product) {
-    throw new Error("Product not found.");
-  }
-
   await logActivity({
     companyId: context.company.id,
     userId: context.userId,
     eventType: "product.updated",
     entityType: "product",
     entityId: product.id,
-    metadata: { sku: product.sku, categoryId },
+    metadata: {
+      sku: product.sku,
+      categoryId,
+      changes: buildFieldChanges(
+        {
+          name: currentProduct.name,
+          sku: currentProduct.sku,
+          categoryName: currentProduct.categoryName ?? null,
+          description: currentProduct.description ?? null,
+          unit: currentProduct.unit,
+          price: currentProduct.price,
+          isActive: currentProduct.isActive,
+        },
+        {
+          name: product.name,
+          sku: product.sku,
+          categoryName: input.categoryName || null,
+          description: product.description ?? null,
+          unit: product.unit,
+          price: product.price,
+          isActive: product.isActive,
+        },
+        [
+          { key: "name" },
+          { key: "sku" },
+          { key: "categoryName" },
+          { key: "description" },
+          { key: "unit" },
+          { key: "price" },
+          { key: "isActive" },
+        ],
+      ),
+    },
   });
 
   return product;
@@ -296,7 +352,10 @@ export async function deactivateProduct(context: CompanyContext, productId: stri
     eventType: "product.deactivated",
     entityType: "product",
     entityId: product.id,
-    metadata: { sku: product.sku },
+    metadata: {
+      sku: product.sku,
+      changes: [{ field: "isActive", before: true, after: false }],
+    },
   });
 }
 

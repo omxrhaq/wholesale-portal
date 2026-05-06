@@ -12,6 +12,7 @@ import {
 import type { CompanyContext } from "@/lib/companies/context";
 import { canTransitionOrderStatus } from "@/lib/orders";
 import { orderEditSchema, type OrderEditInput } from "@/lib/validation/order-edit";
+import { buildFieldChanges } from "@/lib/services/activity-log-service";
 
 type ListOrdersOptions = {
   companyId: string;
@@ -458,6 +459,9 @@ export async function updateOrderDraft(
   const totalAmount = Number(
     nextItems.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2),
   );
+  const previousTotalAmount = Number(
+    existingItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0).toFixed(2),
+  );
   const nextNotes = input.notes?.trim() ? input.notes.trim() : null;
   const removedItemIds = existingItems
     .filter((item) => submittedById.get(item.id) === 0)
@@ -508,9 +512,40 @@ export async function updateOrderDraft(
       entityId: orderId,
       metadata: {
         actorRole: context.companyUser.role,
-        itemCount: nextItems.length,
-        removedItemCount: removedItemIds.length,
-        noteChanged: currentOrder.notes !== nextNotes,
+        changes: buildFieldChanges(
+          {
+            notes: currentOrder.notes ?? null,
+            totalAmount: previousTotalAmount,
+          },
+          {
+            notes: nextNotes,
+            totalAmount,
+          },
+          [
+            { key: "notes" },
+            { key: "totalAmount" },
+          ],
+        ),
+        itemChanges: existingItems
+          .map((item) => {
+            const nextItem = nextItems.find((entry) => entry.id === item.id);
+
+            if (!nextItem || nextItem.quantity === item.quantity) {
+              return null;
+            }
+
+            return {
+              productName: item.productNameSnapshot,
+              beforeQuantity: item.quantity,
+              afterQuantity: nextItem.quantity,
+            };
+          })
+          .filter((entry) => Boolean(entry)),
+        removedItems: existingItems
+          .filter((item) => removedItemIds.includes(item.id))
+          .map((item) => ({
+            productName: item.productNameSnapshot,
+          })),
       },
     });
   });

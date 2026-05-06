@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ActivityHistory } from "@/components/activity/activity-history";
 import { OrderEditForm } from "@/components/orders/order-edit-form";
 import { OrderStatusForm } from "@/components/orders/order-status-form";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
@@ -9,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getUserLocale, type AppLocale } from "@/lib/i18n";
+import { listActivityForEntity } from "@/lib/services/activity-log-service";
 import { getOrderById } from "@/lib/services/order-service";
 
 export default async function OrderDetailPage({
@@ -25,7 +27,10 @@ export default async function OrderDetailPage({
     "wholesaler_staff",
   ]);
   const locale = await getUserLocale();
-  const order = await getOrderById(context.company.id, id);
+  const [order, activityEntries] = await Promise.all([
+    getOrderById(context.company.id, id),
+    listActivityForEntity(context.company.id, "order", id),
+  ]);
   const selectedSort = isOrderItemSort(query.sort) ? query.sort : "product_asc";
   const t = getOrderDetailCopy(locale);
 
@@ -52,8 +57,8 @@ export default async function OrderDetailPage({
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(380px,520px)_minmax(0,1fr)]">
-        <Card>
+      <div className="grid gap-6 xl:grid-cols-12 xl:items-start">
+        <Card className="xl:col-span-6 self-start">
           <CardHeader>
             <CardDescription>{t.status}</CardDescription>
             <CardTitle>
@@ -74,7 +79,7 @@ export default async function OrderDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="xl:col-span-3 self-start">
           <CardHeader>
             <CardTitle>{t.summary}</CardTitle>
           </CardHeader>
@@ -94,7 +99,7 @@ export default async function OrderDetailPage({
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                   {t.totalAmount}
@@ -115,6 +120,14 @@ export default async function OrderDetailPage({
             </div>
           </CardContent>
         </Card>
+
+        <ActivityHistory
+          entries={activityEntries}
+          locale={locale}
+          title={t.activityHistory}
+          emptyLabel={t.noActivityHistory}
+          className="xl:col-span-3 self-start"
+        />
       </div>
 
       {order.status === "new" ? (
@@ -392,6 +405,9 @@ function getOrderDetailCopy(locale: AppLocale) {
       resetChanges: "Reset changes",
       draftSaved: "Order updated.",
       saveFailed: "Failed to update order.",
+      activityHistory: "Activity history",
+      activityHistoryDescription: "Keep track of who edited this order and what changed.",
+      noActivityHistory: "No activity yet for this order.",
       timeline: "Timeline",
       timelineDescription: "Track who created the order and every valid status change after that.",
       orderCreated: "Order created",
@@ -429,6 +445,9 @@ function getOrderDetailCopy(locale: AppLocale) {
       resetChanges: "Wijzigingen resetten",
       draftSaved: "Order bijgewerkt.",
       saveFailed: "Order bijwerken mislukt.",
+      activityHistory: "Geschiedenis",
+      activityHistoryDescription: "Zie wie deze order heeft aangepast en wat er veranderde.",
+      noActivityHistory: "Nog geen geschiedenis voor deze order.",
       timeline: "Tijdlijn",
       timelineDescription: "Volg wie de order heeft aangemaakt en elke geldige statuswijziging daarna.",
       orderCreated: "Order aangemaakt",
@@ -466,6 +485,9 @@ function getOrderDetailCopy(locale: AppLocale) {
       resetChanges: "Reinitialiser",
       draftSaved: "Commande mise a jour.",
       saveFailed: "Impossible de mettre la commande a jour.",
+      activityHistory: "Historique",
+      activityHistoryDescription: "Voyez qui a modifie cette commande et ce qui a change.",
+      noActivityHistory: "Aucun historique pour cette commande.",
       timeline: "Chronologie",
       timelineDescription: "Suivez qui a cree la commande et chaque changement de statut valide ensuite.",
       orderCreated: "Commande creee",

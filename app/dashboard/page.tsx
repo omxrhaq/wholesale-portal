@@ -6,11 +6,13 @@ import {
   Users,
 } from "lucide-react";
 
+import { ActivityHistory } from "@/components/activity/activity-history";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireCompanyContext } from "@/lib/companies/context";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { getUserLocale, type AppLocale } from "@/lib/i18n";
+import { listRecentActivity } from "@/lib/services/activity-log-service";
 import { listCustomers } from "@/lib/services/customer-service";
 import { getOrderOverviewStats } from "@/lib/services/order-service";
 import { listOrders } from "@/lib/services/order-service";
@@ -42,11 +44,12 @@ export default async function DashboardPage({
     ? params.recentSort
     : "date_desc";
   const t = getDashboardCopy(locale);
-  const [products, customers, orders, overviewStats] = await Promise.all([
+  const [products, customers, orders, overviewStats, recentActivity] = await Promise.all([
     listProducts(context.company.id),
     listCustomers(context.company.id),
     listOrders({ companyId: context.company.id, pageSize: 5 }),
     getOrderOverviewStats(context.company.id),
+    listRecentActivity(context.company.id, 8),
   ]);
 
   const activeProducts = products.filter((product) => product.isActive).length;
@@ -81,7 +84,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <Card>
           <CardHeader>
             <CardTitle>{t.recentOrders}</CardTitle>
@@ -176,6 +179,15 @@ export default async function DashboardPage({
             )}
           </CardContent>
         </Card>
+
+        <ActivityHistory
+          entries={recentActivity}
+          locale={locale}
+          title={t.recentActivity}
+          description={t.recentActivityDescription}
+          emptyLabel={t.noRecentActivity}
+          className="xl:sticky xl:top-6"
+        />
       </div>
     </section>
   );
@@ -326,6 +338,9 @@ function getDashboardCopy(locale: AppLocale) {
       openRevenueDescription: "Total value of orders still in progress.",
       recentOrders: "Recent orders",
       recentOrdersDescription: "Quick overview of the most recent incoming orders.",
+      recentActivity: "Recent activity",
+      recentActivityDescription: "See who changed important records across the company.",
+      noRecentActivity: "No recent activity yet.",
       customer: "Customer",
       status: "Status",
       total: "Total",
@@ -343,6 +358,9 @@ function getDashboardCopy(locale: AppLocale) {
       openRevenueDescription: "Totale waarde van bestellingen die nog lopen.",
       recentOrders: "Recente orders",
       recentOrdersDescription: "Snel overzicht van de laatst binnengekomen bestellingen.",
+      recentActivity: "Recente activiteit",
+      recentActivityDescription: "Zie wie belangrijke gegevens in het bedrijf heeft aangepast.",
+      noRecentActivity: "Nog geen recente activiteit.",
       customer: "Klant",
       status: "Status",
       total: "Totaal",
@@ -360,6 +378,9 @@ function getDashboardCopy(locale: AppLocale) {
       openRevenueDescription: "Valeur totale des commandes en cours.",
       recentOrders: "Commandes recentes",
       recentOrdersDescription: "Apercu rapide des dernieres commandes entrantes.",
+      recentActivity: "Activite recente",
+      recentActivityDescription: "Voyez qui a modifie les donnees importantes dans l'entreprise.",
+      noRecentActivity: "Aucune activite recente pour le moment.",
       customer: "Client",
       status: "Statut",
       total: "Total",
