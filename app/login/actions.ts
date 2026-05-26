@@ -1,16 +1,25 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 
+import { clearActiveCompanyId, setActiveCompanyId } from "@/lib/companies/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { companyUsers } from "@/lib/db/schema";
+import { companies, companyUsers } from "@/lib/db/schema";
 import { loginSchema } from "@/lib/validation/auth";
 
 type LoginState = {
   error?: string;
 };
+
+function getSafeNextPath(next: string | null | undefined, fallback: string) {
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+
+  return fallback;
+}
 
 export async function loginAction(
   _state: LoginState,
@@ -40,10 +49,6 @@ export async function loginAction(
     };
   }
 
-  if (parsed.data.next) {
-    redirect(parsed.data.next);
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -52,23 +57,42 @@ export async function loginAction(
     redirect("/login");
   }
 
-  const [membership] = await db
+  const membershipsRaw = await db
     .select({
+      companyId: companyUsers.companyId,
       role: companyUsers.role,
     })
     .from(companyUsers)
+    .innerJoin(companies, eq(companyUsers.companyId, companies.id))
     .where(eq(companyUsers.userId, user.id))
-    .limit(1);
+    .orderBy(asc(companies.name), asc(companyUsers.createdAt));
 
-  if (membership?.role === "buyer") {
-    redirect("/portal");
+  const memberships = membershipsRaw.filter((membership) =>
+    ["wholesaler_owner", "wholesaler_staff"].includes(membership.role),
+  );
+
+  if (memberships.length === 0) {
+    await supabase.auth.signOut();
+    await clearActiveCompanyId();
+    return {
+      error: "Your account is not linked to a wholesale company.",
+    };
   }
 
-  redirect("/dashboard");
+  const nextPath = getSafeNextPath(parsed.data.next, "/dashboard");
+
+  if (memberships.length === 1) {
+    await setActiveCompanyId(memberships[0].companyId);
+    redirect(nextPath);
+  }
+
+  await clearActiveCompanyId();
+  redirect(`/select-company?mode=dashboard&next=${encodeURIComponent(nextPath)}`);
 }
 
 export async function logoutAction() {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+  await clearActiveCompanyId();
   redirect("/login");
 }

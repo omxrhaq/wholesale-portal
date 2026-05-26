@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { clearActiveCompanyId } from "@/lib/companies/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
+  await clearActiveCompanyId();
 
   const url = new URL(request.url);
   const redirectUrl = new URL("/portal/login", url.origin);

@@ -157,7 +157,6 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 ## What Still Needs Work
 
 - Identity hardening:
-  - replace remaining email-driven buyer linking flows with an explicit \`portalUserId\` model
   - make company selection explicit for users who can belong to more than one company
   - audit all server actions for strict company-scoped entity checks
 - Automation engine:
@@ -191,7 +190,7 @@ ${formatList(routeHandlers)}
 - Drizzle config: \`drizzle.config.ts\`
 - Generated SQL migrations: \`drizzle/*.sql\`
 - Company scoping is handled with \`company_id\` across business tables.
-- RLS is enabled on public app tables with policies based on \`company_users\` roles and \`customers.auth_user_id\`.
+- RLS is enabled on public app tables with policies based on \`company_users\` roles and \`customers.portal_user_id\`.
 - New public tables automatically get RLS enabled through the \`ensure_rls_on_public_tables\` event trigger.
 - Order items store product name and price snapshots at order time.
 - Activity logs are used as the audit trail for customer, product and order events.

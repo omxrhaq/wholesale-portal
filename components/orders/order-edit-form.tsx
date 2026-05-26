@@ -24,9 +24,11 @@ type OrderEditFormProps = {
   locale: AppLocale;
   initialNotes: string | null;
   initialItems: EditableOrderItem[];
+  showHeader?: boolean;
   copy: {
     editTitle: string;
     editDescription: string;
+    product?: string;
     quantity: string;
     unitPrice: string;
     lineTotal: string;
@@ -45,6 +47,7 @@ export function OrderEditForm({
   locale,
   initialNotes,
   initialItems,
+  showHeader = true,
   copy,
 }: OrderEditFormProps) {
   const router = useRouter();
@@ -109,16 +112,18 @@ export function OrderEditForm({
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold text-foreground">{copy.editTitle}</h3>
-        <p className="text-sm leading-6 text-muted-foreground">{copy.editDescription}</p>
-      </div>
+      {showHeader ? (
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">{copy.editTitle}</h3>
+          <p className="text-sm leading-6 text-muted-foreground">{copy.editDescription}</p>
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-border/70">
         <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
           <thead className="bg-muted/70 text-left text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 font-medium">Product</th>
+              <th className="px-4 py-3 font-medium">{copy.product ?? "Product"}</th>
               <th className="px-4 py-3 font-medium">{copy.quantity}</th>
               <th className="px-4 py-3 font-medium">{copy.unitPrice}</th>
               <th className="px-4 py-3 font-medium">{copy.lineTotal}</th>

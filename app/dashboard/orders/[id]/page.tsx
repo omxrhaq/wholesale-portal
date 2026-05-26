@@ -130,9 +130,15 @@ export default async function OrderDetailPage({
         />
       </div>
 
-      {order.status === "new" ? (
-        <Card>
-          <CardContent className="p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.orderItems}</CardTitle>
+          {order.status === "new" ? (
+            <CardDescription>{t.editDescription}</CardDescription>
+          ) : null}
+        </CardHeader>
+        <CardContent>
+          {order.status === "new" ? (
             <OrderEditForm
               orderId={order.id}
               locale={locale}
@@ -143,9 +149,11 @@ export default async function OrderDetailPage({
                 unitPrice: item.unitPrice,
                 quantity: item.quantity,
               }))}
+              showHeader={false}
               copy={{
                 editTitle: t.editTitle,
                 editDescription: t.editDescription,
+                product: t.product,
                 quantity: t.quantity,
                 unitPrice: t.unitPrice,
                 lineTotal: t.lineTotal,
@@ -158,76 +166,69 @@ export default async function OrderDetailPage({
                 saveFailed: t.saveFailed,
               }}
             />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.orderItems}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-hidden rounded-2xl border border-border/70">
-              <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
-                <thead className="bg-muted/70 text-left text-muted-foreground">
-                  <tr>
-                    <SortableHeader
-                      label={t.product}
-                      orderId={order.id}
-                      sortKey="product"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.quantity}
-                      orderId={order.id}
-                      sortKey="quantity"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.unitPrice}
-                      orderId={order.id}
-                      sortKey="unit_price"
-                      activeSort={selectedSort}
-                    />
-                    <SortableHeader
-                      label={t.lineTotal}
-                      orderId={order.id}
-                      sortKey="line_total"
-                      activeSort={selectedSort}
-                    />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/70">
-                  {sortedItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-accent/45">
-                      <td className="px-4 py-4 font-medium text-foreground">
-                        {item.productNameSnapshot}
-                      </td>
-                      <td className="px-4 py-4 text-foreground/80">{item.quantity}</td>
-                      <td className="px-4 py-4 text-foreground/80">
-                        {formatCurrency(item.unitPrice, locale)}
-                      </td>
-                      <td className="px-4 py-4 text-foreground/80">
-                        {formatCurrency(item.lineTotal, locale)}
-                      </td>
+          ) : (
+            <>
+              <div className="overflow-hidden rounded-2xl border border-border/70">
+                <table className="min-w-full divide-y divide-border bg-card/90 text-sm">
+                  <thead className="bg-muted/70 text-left text-muted-foreground">
+                    <tr>
+                      <SortableHeader
+                        label={t.product}
+                        orderId={order.id}
+                        sortKey="product"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.quantity}
+                        orderId={order.id}
+                        sortKey="quantity"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.unitPrice}
+                        orderId={order.id}
+                        sortKey="unit_price"
+                        activeSort={selectedSort}
+                      />
+                      <SortableHeader
+                        label={t.lineTotal}
+                        orderId={order.id}
+                        sortKey="line_total"
+                        activeSort={selectedSort}
+                      />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {order.notes ? (
-              <div className="mt-6 rounded-2xl border border-border/70 bg-muted/30 p-4">
-                <p className="text-sm font-medium text-foreground">{t.notes}</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {order.notes}
-                </p>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {sortedItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-accent/45">
+                        <td className="px-4 py-4 font-medium text-foreground">
+                          {item.productNameSnapshot}
+                        </td>
+                        <td className="px-4 py-4 text-foreground/80">{item.quantity}</td>
+                        <td className="px-4 py-4 text-foreground/80">
+                          {formatCurrency(item.unitPrice, locale)}
+                        </td>
+                        <td className="px-4 py-4 text-foreground/80">
+                          {formatCurrency(item.lineTotal, locale)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
+
+              {order.notes ? (
+                <div className="mt-6 rounded-2xl border border-border/70 bg-muted/30 p-4">
+                  <p className="text-sm font-medium text-foreground">{t.notes}</p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    {order.notes}
+                  </p>
+                </div>
+              ) : null}
+            </>
+          )}
+        </CardContent>
+      </Card>
     </section>
   );
 }

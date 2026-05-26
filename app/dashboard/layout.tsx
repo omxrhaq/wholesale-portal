@@ -1,3 +1,4 @@
+import { CompanySwitcher } from "@/components/dashboard/company-switcher";
 import Link from "next/link";
 import { KeyRound, Package2, ShoppingCart, Users } from "lucide-react";
 
@@ -5,7 +6,10 @@ import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { MobileDashboardNav } from "@/components/dashboard/mobile-dashboard-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { requireCompanyContext } from "@/lib/companies/context";
+import {
+  listCurrentUserCompanyMemberships,
+  requireCompanyContext,
+} from "@/lib/companies/context";
 import { getCommonCopy, getDashboardNavCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
 
@@ -18,6 +22,10 @@ export default async function DashboardLayout({
   const nav = getDashboardNavCopy(locale);
   const common = getCommonCopy(locale);
   const context = await requireCompanyContext([
+    "wholesaler_owner",
+    "wholesaler_staff",
+  ]);
+  const companyMemberships = await listCurrentUserCompanyMemberships([
     "wholesaler_owner",
     "wholesaler_staff",
   ]);
@@ -44,6 +52,8 @@ export default async function DashboardLayout({
 
           <MobileDashboardNav
             currentLocale={locale}
+            currentCompanyId={context.company.id}
+            companyMemberships={companyMemberships}
             copy={common}
             links={navLinks}
           />
@@ -60,6 +70,12 @@ export default async function DashboardLayout({
               ))}
             </nav>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <CompanySwitcher
+                currentLocale={locale}
+                currentCompanyId={context.company.id}
+                memberships={companyMemberships}
+                mode="dashboard"
+              />
               <ThemeToggle
                 label={common.theme}
                 lightLabel={common.lightMode}

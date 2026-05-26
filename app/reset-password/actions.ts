@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 
+import { clearActiveCompanyId } from "@/lib/companies/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPasswordCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
@@ -52,6 +53,7 @@ export async function resetPasswordAction(
   }
 
   await supabase.auth.signOut();
+  await clearActiveCompanyId();
 
   redirect(
     parsed.data.loginType === "buyer"

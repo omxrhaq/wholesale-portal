@@ -81,7 +81,7 @@ export const companies = pgTable(
               select 1
               from customers c
               where c.company_id = ${table.id}
-                and c.auth_user_id = (select auth.uid())
+                and c.portal_user_id = (select auth.uid())
                 and c.is_active is true
             )
           )
@@ -123,7 +123,7 @@ export const customers = pgTable(
       .references(() => companies.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }),
-    authUserId: uuid("auth_user_id"),
+    portalUserId: uuid("portal_user_id"),
     phone: varchar("phone", { length: 50 }),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -136,8 +136,11 @@ export const customers = pgTable(
   (table) => [
     index("customers_company_idx").on(table.companyId),
     index("customers_company_active_idx").on(table.companyId, table.isActive),
-    index("customers_auth_user_idx").on(table.authUserId),
-    uniqueIndex("customers_company_auth_user_idx").on(table.companyId, table.authUserId),
+    index("customers_portal_user_idx").on(table.portalUserId),
+    uniqueIndex("customers_company_portal_user_idx").on(
+      table.companyId,
+      table.portalUserId,
+    ),
     pgPolicy("customers_select_company_staff_or_own_buyer", {
       for: "select",
       to: "authenticated",
@@ -149,7 +152,7 @@ export const customers = pgTable(
           and cu.role in ('wholesaler_owner', 'wholesaler_staff')
       )
       or (
-        ${table.authUserId} = (select auth.uid())
+        ${table.portalUserId} = (select auth.uid())
         and ${table.isActive} is true
       )`,
     }),
@@ -194,7 +197,7 @@ export const productCategories = pgTable(
                 select 1
                 from customers c
                 where c.company_id = ${table.companyId}
-                  and c.auth_user_id = (select auth.uid())
+                and c.portal_user_id = (select auth.uid())
                   and c.is_active is true
               )
             )
@@ -247,7 +250,7 @@ export const products = pgTable(
                 select 1
                 from customers c
                 where c.company_id = ${table.companyId}
-                  and c.auth_user_id = (select auth.uid())
+                  and c.portal_user_id = (select auth.uid())
                   and c.is_active is true
               )
             )
@@ -299,7 +302,7 @@ export const orders = pgTable(
         from customers c
         where c.id = ${table.customerId}
           and c.company_id = ${table.companyId}
-          and c.auth_user_id = (select auth.uid())
+          and c.portal_user_id = (select auth.uid())
           and c.is_active is true
       )`,
     }),
@@ -343,7 +346,7 @@ export const orderItems = pgTable(
                 and cu.role in ('wholesaler_owner', 'wholesaler_staff')
             )
             or (
-              c.auth_user_id = (select auth.uid())
+              c.portal_user_id = (select auth.uid())
               and c.is_active is true
             )
           )

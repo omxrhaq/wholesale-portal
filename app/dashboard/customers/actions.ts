@@ -155,7 +155,7 @@ export async function setupCustomerPortalLoginAction(
     }
 
     const supabaseAdmin = createSupabaseAdminClient();
-    const existingUser = await findAuthUserByEmail(supabaseAdmin, customer.email);
+    const existingUser = await resolveCustomerPortalAuthUser(supabaseAdmin, customer);
     const authUser = existingUser
       ? await updateAuthUserPassword(existingUser.id, parsed.password)
       : await createAuthUser(customer.email, parsed.password, customer.name);
@@ -170,7 +170,7 @@ export async function setupCustomerPortalLoginAction(
       entityId: customer.id,
       metadata: {
         email: customer.email,
-        authUserId: authUser.id,
+        portalUserId: authUser.id,
       },
     });
 
@@ -288,7 +288,7 @@ export async function generateCustomerPortalSetupLinkAction(
 
     const redirectTo = await buildBuyerPasswordSetupUrl();
     const supabaseAdmin = createSupabaseAdminClient();
-    const existingUser = await findAuthUserByEmail(supabaseAdmin, customer.email);
+    const existingUser = await resolveCustomerPortalAuthUser(supabaseAdmin, customer);
 
     if (existingUser) {
       await ensureBuyerAccess(
@@ -423,7 +423,7 @@ async function sendCustomerPortalSetupEmail(
 
   const redirectTo = await buildBuyerPasswordSetupUrl();
   const supabaseAdmin = createSupabaseAdminClient();
-  const existingUser = await findAuthUserByEmail(supabaseAdmin, customer.email);
+  const existingUser = await resolveCustomerPortalAuthUser(supabaseAdmin, customer);
 
   if (existingUser) {
     await ensureBuyerAccess(
@@ -510,10 +510,49 @@ async function findAuthUserByEmail(
   return null;
 }
 
+async function getAuthUserById(
+  supabaseAdmin: SupabaseClient,
+  userId: string,
+) {
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.user ?? null;
+}
+
+async function resolveCustomerPortalAuthUser(
+  supabaseAdmin: SupabaseClient,
+  customer: {
+    portalUserId: string | null;
+    email: string | null;
+  },
+) {
+  if (customer.portalUserId) {
+    const linkedUser = await getAuthUserById(supabaseAdmin, customer.portalUserId);
+
+    if (!linkedUser) {
+      throw new Error(
+        "The linked portal user no longer exists. Generate a new portal login for this customer.",
+      );
+    }
+
+    return linkedUser;
+  }
+
+  if (!customer.email) {
+    return null;
+  }
+
+  return findAuthUserByEmail(supabaseAdmin, customer.email);
+}
+
 async function ensureBuyerAccess(
   companyId: string,
   customerId: string,
-  authUserId: string,
+  portalUserId: string,
   email: string,
   fullName: string,
 ) {
@@ -523,7 +562,7 @@ async function ensureBuyerAccess(
     .where(
       and(
         eq(companyUsers.companyId, companyId),
-        eq(companyUsers.userId, authUserId),
+        eq(companyUsers.userId, portalUserId),
       ),
     )
     .limit(1);
@@ -531,7 +570,7 @@ async function ensureBuyerAccess(
   await db
     .insert(profiles)
     .values({
-      id: authUserId,
+      id: portalUserId,
       email,
       fullName,
     })
@@ -546,7 +585,7 @@ async function ensureBuyerAccess(
   if (!existingMembership[0]) {
     await db.insert(companyUsers).values({
       companyId,
-      userId: authUserId,
+      userId: portalUserId,
       role: "buyer",
     });
   }
@@ -555,20 +594,20 @@ async function ensureBuyerAccess(
     await tx
       .update(customers)
       .set({
-        authUserId: null,
+        portalUserId: null,
         updatedAt: new Date(),
       })
       .where(
         and(
           eq(customers.companyId, companyId),
-          eq(customers.authUserId, authUserId),
+          eq(customers.portalUserId, portalUserId),
         ),
       );
 
     const [customer] = await tx
       .update(customers)
       .set({
-        authUserId,
+        portalUserId,
         updatedAt: new Date(),
       })
       .where(
