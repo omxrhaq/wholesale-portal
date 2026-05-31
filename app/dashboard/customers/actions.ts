@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
@@ -478,38 +478,6 @@ async function sendCustomerPortalSetupEmail(
   });
 }
 
-async function findAuthUserByEmail(
-  supabaseAdmin: SupabaseClient,
-  email: string,
-) {
-  const normalizedEmail = email.toLowerCase();
-
-  for (let page = 1; page <= 10; page += 1) {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      page,
-      perPage: 100,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const match = data.users.find(
-      (user: User) => user.email?.toLowerCase() === normalizedEmail,
-    );
-
-    if (match) {
-      return match;
-    }
-
-    if (data.users.length < 100) {
-      return null;
-    }
-  }
-
-  return null;
-}
-
 async function getAuthUserById(
   supabaseAdmin: SupabaseClient,
   userId: string,
@@ -527,7 +495,6 @@ async function resolveCustomerPortalAuthUser(
   supabaseAdmin: SupabaseClient,
   customer: {
     portalUserId: string | null;
-    email: string | null;
   },
 ) {
   if (customer.portalUserId) {
@@ -542,11 +509,7 @@ async function resolveCustomerPortalAuthUser(
     return linkedUser;
   }
 
-  if (!customer.email) {
-    return null;
-  }
-
-  return findAuthUserByEmail(supabaseAdmin, customer.email);
+  return null;
 }
 
 async function ensureBuyerAccess(

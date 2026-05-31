@@ -64,6 +64,13 @@
       "when": 1779782400000,
       "tag": "0008_portal_user_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780200000000,
+      "tag": "0009_backfill_customer_portal_users",
+      "breakpoints": true
     }
   ]
 }

@@ -1,16 +1,9 @@
 import ExcelJS from "exceljs";
 
-import { getCurrentCompanyContext } from "@/lib/companies/context";
+import { requireCompanyContext } from "@/lib/companies/context";
 
 export async function GET() {
-  const context = await getCurrentCompanyContext();
-
-  if (
-    !context ||
-    !["wholesaler_owner", "wholesaler_staff"].includes(context.companyUser.role)
-  ) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  await requireCompanyContext(["wholesaler_owner", "wholesaler_staff"]);
 
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Products");

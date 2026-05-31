@@ -107,6 +107,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0006_auto_enable_rls_new_tables.sql`
 - `0007_product_categories.sql`
 - `0008_portal_user_identity.sql`
+- `0009_backfill_customer_portal_users.sql`
 
 ## Environment
 
