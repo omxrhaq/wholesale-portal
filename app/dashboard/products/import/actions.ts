@@ -1,14 +1,10 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 
 import { requireCompanyContext } from "@/lib/companies/context";
-import { db } from "@/lib/db";
-import { imports, products } from "@/lib/db/schema";
-import { resolveProductCategoryId } from "@/lib/services/product-service";
-import { productImportPayloadSchema } from "@/lib/validation/product-import";
+import { importProducts } from "@/lib/services/import-service";
 
 type ProductImportActionResult = {
   success: boolean;
@@ -36,104 +32,7 @@ export async function importProductsAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
-    const parsed = productImportPayloadSchema.parse(payload);
-    const warnings: string[] = [];
-    const seenSkus = new Set<string>();
-    const categoryCache = new Map<string, string | null>();
-
-    const [importJob] = await db
-      .insert(imports)
-      .values({
-        companyId: context.company.id,
-        fileName: parsed.fileName,
-        status: "processing",
-        totalRows: parsed.rows.length,
-        importedRows: 0,
-        failedRows: 0,
-      })
-      .returning();
-
-    const existingProducts = await db
-      .select({
-        id: products.id,
-        sku: products.sku,
-      })
-      .from(products)
-      .where(eq(products.companyId, context.company.id));
-
-    const existingBySku = new Map(
-      existingProducts.map((product) => [product.sku.toLowerCase(), product]),
-    );
-
-    let importedRows = 0;
-    let updatedRows = 0;
-    let failedRows = 0;
-
-    for (const row of parsed.rows) {
-      const normalizedSku = row.sku.trim().toLowerCase();
-
-      if (seenSkus.has(normalizedSku)) {
-        failedRows += 1;
-        warnings.push(`Row ${row.sourceRowNumber}: duplicate SKU in the same file (${row.sku}).`);
-        continue;
-      }
-
-      seenSkus.add(normalizedSku);
-
-      const existing = existingBySku.get(normalizedSku);
-      const categoryId = await getCachedCategoryId(
-        context.company.id,
-        row.categoryName,
-        categoryCache,
-      );
-
-      if (existing) {
-        await db
-          .update(products)
-          .set({
-            categoryId,
-            name: row.name,
-            sku: row.sku,
-            description: row.description || null,
-            unit: row.unit,
-            price: row.price,
-            isActive: row.isActive,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(products.id, existing.id),
-              eq(products.companyId, context.company.id),
-            ),
-          );
-
-        importedRows += 1;
-        updatedRows += 1;
-        continue;
-      }
-
-      await db.insert(products).values({
-        companyId: context.company.id,
-        categoryId,
-        name: row.name,
-        sku: row.sku,
-        description: row.description || null,
-        unit: row.unit,
-        price: row.price,
-        isActive: row.isActive,
-      });
-
-      importedRows += 1;
-    }
-
-    await db
-      .update(imports)
-      .set({
-        status: "completed",
-        importedRows,
-        failedRows,
-      })
-      .where(eq(imports.id, importJob.id));
+    const summary = await importProducts(context, payload);
 
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/products");
@@ -141,12 +40,7 @@ export async function importProductsAction(
 
     return {
       success: true,
-      summary: {
-        importedRows,
-        updatedRows,
-        failedRows,
-        warnings,
-      },
+      summary,
     };
   } catch (error) {
     return {
@@ -224,27 +118,4 @@ function formatFieldLabel(fieldName: string) {
     default:
       return fieldName;
   }
-}
-
-async function getCachedCategoryId(
-  companyId: string,
-  categoryName: string | undefined,
-  cache: Map<string, string | null>,
-) {
-  const normalizedName = categoryName?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
-
-  if (!normalizedName) {
-    return null;
-  }
-
-  const existing = cache.get(normalizedName);
-
-  if (cache.has(normalizedName)) {
-    return existing ?? null;
-  }
-
-  const categoryId = await resolveProductCategoryId(companyId, categoryName);
-  cache.set(normalizedName, categoryId);
-
-  return categoryId;
 }

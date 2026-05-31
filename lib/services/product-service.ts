@@ -1,9 +1,9 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { db, type DbExecutor } from "@/lib/db";
 import { productCategories, products } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
-import { buildFieldChanges, logActivity } from "@/lib/services/activity-log-service";
+import { buildFieldChanges, logActivityTx } from "@/lib/services/activity-log-service";
 import {
   normalizeProductCategoryName,
   productCategorySchema,
@@ -126,31 +126,32 @@ export async function createProductCategory(
     throw new Error("Category name is required.");
   }
 
-  const [category] = await db
-    .insert(productCategories)
-    .values({
+  return db.transaction(async (tx) => {
+    const [category] = await tx
+      .insert(productCategories)
+      .values({
+        companyId: context.company.id,
+        name: normalizedName,
+        normalizedName: normalizedName.toLowerCase(),
+      })
+      .returning({
+        id: productCategories.id,
+        name: productCategories.name,
+        updatedAt: productCategories.updatedAt,
+      });
+
+    await logActivityTx(tx, {
       companyId: context.company.id,
-      name: normalizedName,
-      normalizedName: normalizedName.toLowerCase(),
-    })
-    .returning({
-      id: productCategories.id,
-      name: productCategories.name,
-      updatedAt: productCategories.updatedAt,
+      userId: context.userId,
+      eventType: "product_category.created",
+      entityId: category.id,
+      metadata: {
+        changes: [{ field: "name", before: null, after: category.name }],
+      },
     });
 
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "product_category.created",
-    entityType: "product_category",
-    entityId: category.id,
-    metadata: {
-      changes: [{ field: "name", before: null, after: category.name }],
-    },
+    return category;
   });
-
-  return category;
 }
 
 export async function updateProductCategory(
@@ -171,41 +172,42 @@ export async function updateProductCategory(
     throw new Error("Category not found.");
   }
 
-  const [category] = await db
-    .update(productCategories)
-    .set({
-      name: normalizedName,
-      normalizedName: normalizedName.toLowerCase(),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(productCategories.id, categoryId),
-        eq(productCategories.companyId, context.company.id),
-      ),
-    )
-    .returning({
-      id: productCategories.id,
-      name: productCategories.name,
-      updatedAt: productCategories.updatedAt,
+  return db.transaction(async (tx) => {
+    const [category] = await tx
+      .update(productCategories)
+      .set({
+        name: normalizedName,
+        normalizedName: normalizedName.toLowerCase(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(productCategories.id, categoryId),
+          eq(productCategories.companyId, context.company.id),
+        ),
+      )
+      .returning({
+        id: productCategories.id,
+        name: productCategories.name,
+        updatedAt: productCategories.updatedAt,
+      });
+
+    await logActivityTx(tx, {
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "product_category.updated",
+      entityId: category.id,
+      metadata: {
+        changes: buildFieldChanges(
+          { name: currentCategory.name },
+          { name: category.name },
+          [{ key: "name" }],
+        ),
+      },
     });
 
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "product_category.updated",
-    entityType: "product_category",
-    entityId: category.id,
-    metadata: {
-      changes: buildFieldChanges(
-        { name: currentCategory.name },
-        { name: category.name },
-        [{ key: "name" }],
-      ),
-    },
+    return category;
   });
-
-  return category;
 }
 
 export async function createProduct(
@@ -213,47 +215,49 @@ export async function createProduct(
   rawInput: ProductInput,
 ) {
   const input = productSchema.parse(rawInput);
-  const categoryId = await resolveProductCategoryId(
-    context.company.id,
-    input.categoryName,
-  );
+  return db.transaction(async (tx) => {
+    const categoryId = await resolveProductCategoryId(
+      context.company.id,
+      input.categoryName,
+      tx,
+    );
 
-  const [product] = await db
-    .insert(products)
-    .values({
+    const [product] = await tx
+      .insert(products)
+      .values({
+        companyId: context.company.id,
+        categoryId,
+        name: input.name,
+        sku: input.sku,
+        description: input.description || null,
+        unit: input.unit,
+        price: input.price,
+        isActive: input.isActive,
+      })
+      .returning();
+
+    await logActivityTx(tx, {
       companyId: context.company.id,
-      categoryId,
-      name: input.name,
-      sku: input.sku,
-      description: input.description || null,
-      unit: input.unit,
-      price: input.price,
-      isActive: input.isActive,
-    })
-    .returning();
+      userId: context.userId,
+      eventType: "product.created",
+      entityId: product.id,
+      metadata: {
+        sku: product.sku,
+        categoryId,
+        changes: [
+          { field: "name", before: null, after: product.name },
+          { field: "sku", before: null, after: product.sku },
+          { field: "categoryName", before: null, after: input.categoryName || null },
+          { field: "description", before: null, after: product.description ?? null },
+          { field: "unit", before: null, after: product.unit },
+          { field: "price", before: null, after: product.price },
+          { field: "isActive", before: null, after: product.isActive },
+        ],
+      },
+    });
 
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "product.created",
-    entityType: "product",
-    entityId: product.id,
-    metadata: {
-      sku: product.sku,
-      categoryId,
-      changes: [
-        { field: "name", before: null, after: product.name },
-        { field: "sku", before: null, after: product.sku },
-        { field: "categoryName", before: null, after: input.categoryName || null },
-        { field: "description", before: null, after: product.description ?? null },
-        { field: "unit", before: null, after: product.unit },
-        { field: "price", before: null, after: product.price },
-        { field: "isActive", before: null, after: product.isActive },
-      ],
-    },
+    return product;
   });
-
-  return product;
 }
 
 export async function updateProduct(
@@ -268,100 +272,104 @@ export async function updateProduct(
     throw new Error("Product not found.");
   }
 
-  const categoryId = await resolveProductCategoryId(
-    context.company.id,
-    input.categoryName,
-  );
+  return db.transaction(async (tx) => {
+    const categoryId = await resolveProductCategoryId(
+      context.company.id,
+      input.categoryName,
+      tx,
+    );
 
-  const [product] = await db
-    .update(products)
-    .set({
-      categoryId,
-      name: input.name,
-      sku: input.sku,
-      description: input.description || null,
-      unit: input.unit,
-      price: input.price,
-      isActive: input.isActive,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(products.id, productId), eq(products.companyId, context.company.id)))
-    .returning();
+    const [product] = await tx
+      .update(products)
+      .set({
+        categoryId,
+        name: input.name,
+        sku: input.sku,
+        description: input.description || null,
+        unit: input.unit,
+        price: input.price,
+        isActive: input.isActive,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(products.id, productId), eq(products.companyId, context.company.id)))
+      .returning();
 
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "product.updated",
-    entityType: "product",
-    entityId: product.id,
-    metadata: {
-      sku: product.sku,
-      categoryId,
-      changes: buildFieldChanges(
-        {
-          name: currentProduct.name,
-          sku: currentProduct.sku,
-          categoryName: currentProduct.categoryName ?? null,
-          description: currentProduct.description ?? null,
-          unit: currentProduct.unit,
-          price: currentProduct.price,
-          isActive: currentProduct.isActive,
-        },
-        {
-          name: product.name,
-          sku: product.sku,
-          categoryName: input.categoryName || null,
-          description: product.description ?? null,
-          unit: product.unit,
-          price: product.price,
-          isActive: product.isActive,
-        },
-        [
-          { key: "name" },
-          { key: "sku" },
-          { key: "categoryName" },
-          { key: "description" },
-          { key: "unit" },
-          { key: "price" },
-          { key: "isActive" },
-        ],
-      ),
-    },
+    await logActivityTx(tx, {
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "product.updated",
+      entityId: product.id,
+      metadata: {
+        sku: product.sku,
+        categoryId,
+        changes: buildFieldChanges(
+          {
+            name: currentProduct.name,
+            sku: currentProduct.sku,
+            categoryName: currentProduct.categoryName ?? null,
+            description: currentProduct.description ?? null,
+            unit: currentProduct.unit,
+            price: currentProduct.price,
+            isActive: currentProduct.isActive,
+          },
+          {
+            name: product.name,
+            sku: product.sku,
+            categoryName: input.categoryName || null,
+            description: product.description ?? null,
+            unit: product.unit,
+            price: product.price,
+            isActive: product.isActive,
+          },
+          [
+            { key: "name" },
+            { key: "sku" },
+            { key: "categoryName" },
+            { key: "description" },
+            { key: "unit" },
+            { key: "price" },
+            { key: "isActive" },
+          ],
+        ),
+      },
+    });
+
+    return product;
   });
-
-  return product;
 }
 
 export async function deactivateProduct(context: CompanyContext, productId: string) {
-  const [product] = await db
-    .update(products)
-    .set({
-      isActive: false,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(products.id, productId), eq(products.companyId, context.company.id)))
-    .returning();
+  await db.transaction(async (tx) => {
+    const [product] = await tx
+      .update(products)
+      .set({
+        isActive: false,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(products.id, productId), eq(products.companyId, context.company.id)))
+      .returning();
 
-  if (!product) {
-    throw new Error("Product not found.");
-  }
+    if (!product) {
+      throw new Error("Product not found.");
+    }
 
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "product.deactivated",
-    entityType: "product",
-    entityId: product.id,
-    metadata: {
-      sku: product.sku,
-      changes: [{ field: "isActive", before: true, after: false }],
-    },
+    await logActivityTx(tx, {
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "product.deactivated",
+      entityId: product.id,
+      metadata: {
+        sku: product.sku,
+        changes: [{ field: "isActive", before: true, after: false }],
+      },
+    });
   });
 }
 
 export async function resolveProductCategoryId(
   companyId: string,
   categoryName?: string | null,
+  executor: DbExecutor = db,
 ) {
   const name = normalizeProductCategoryName(categoryName);
 
@@ -370,7 +378,7 @@ export async function resolveProductCategoryId(
   }
 
   const normalizedName = name.toLowerCase();
-  const [category] = await db
+  const [category] = await executor
     .insert(productCategories)
     .values({
       companyId,
