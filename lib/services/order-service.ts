@@ -7,12 +7,17 @@ import {
   orderItems,
   orders,
   profiles,
+  products,
   type OrderStatus,
 } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
 import { canTransitionOrderStatus } from "@/lib/orders";
 import { orderEditSchema, type OrderEditInput } from "@/lib/validation/order-edit";
-import { buildFieldChanges } from "@/lib/services/activity-log-service";
+import type { PortalOrderInput } from "@/lib/validation/portal-order";
+import {
+  buildFieldChanges,
+  logActivityTx,
+} from "@/lib/services/activity-log-service";
 
 type ListOrdersOptions = {
   companyId: string;
@@ -319,6 +324,113 @@ export async function getOrderById(companyId: string, orderId: string) {
   };
 }
 
+export async function createPortalOrder(
+  context: CompanyContext,
+  portalUserId: string,
+  input: PortalOrderInput,
+) {
+  const customer = await db
+    .select({
+      id: customers.id,
+    })
+    .from(customers)
+    .where(
+      and(
+        eq(customers.companyId, context.company.id),
+        eq(customers.portalUserId, portalUserId),
+        eq(customers.isActive, true),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows[0] ?? null);
+
+  if (!customer) {
+    throw new Error("No active customer profile is linked to your account in this company.");
+  }
+
+  const requestedProductIds = input.items.map((item) => item.productId);
+  const selectedProducts = await db
+    .select({
+      id: products.id,
+      name: products.name,
+      price: products.price,
+    })
+    .from(products)
+    .where(
+      and(
+        eq(products.companyId, context.company.id),
+        eq(products.isActive, true),
+        inArray(products.id, requestedProductIds),
+      ),
+    );
+
+  if (selectedProducts.length !== requestedProductIds.length) {
+    throw new Error("One or more selected products are no longer available.");
+  }
+
+  const productById = new Map(selectedProducts.map((product) => [product.id, product]));
+  const orderLines = input.items.map((item) => {
+    const product = productById.get(item.productId);
+
+    if (!product) {
+      throw new Error("Product not found during order creation.");
+    }
+
+    const lineTotal = Number((product.price * item.quantity).toFixed(2));
+
+    return {
+      productId: product.id,
+      productNameSnapshot: product.name,
+      unitPrice: product.price,
+      quantity: item.quantity,
+      lineTotal,
+    };
+  });
+
+  const totalAmount = Number(
+    orderLines.reduce((sum, line) => sum + line.lineTotal, 0).toFixed(2),
+  );
+
+  const createdOrder = await db.transaction(async (tx) => {
+    const [newOrder] = await tx
+      .insert(orders)
+      .values({
+        companyId: context.company.id,
+        customerId: customer.id,
+        status: "new",
+        totalAmount,
+        notes: input.notes?.trim() ? input.notes.trim() : null,
+      })
+      .returning({ id: orders.id });
+
+    await tx.insert(orderItems).values(
+      orderLines.map((line) => ({
+        orderId: newOrder.id,
+        productId: line.productId,
+        productNameSnapshot: line.productNameSnapshot,
+        unitPrice: line.unitPrice,
+        quantity: line.quantity,
+        lineTotal: line.lineTotal,
+      })),
+    );
+
+    await logActivityTx(tx, {
+      companyId: context.company.id,
+      userId: context.userId,
+      eventType: "order.created",
+      entityId: newOrder.id,
+      metadata: {
+        nextStatus: "new",
+        actorRole: context.companyUser.role,
+      },
+    });
+
+    return newOrder;
+  });
+
+  return createdOrder;
+}
+
 export async function updateOrderStatus(
   context: CompanyContext,
   orderId: string,
@@ -370,11 +482,10 @@ export async function updateOrderStatus(
       throw new Error("Order status changed before this update. Refresh and try again.");
     }
 
-    await tx.insert(activityLogs).values({
+    await logActivityTx(tx, {
       companyId: context.company.id,
       userId: context.userId,
       eventType: "order.status_changed",
-      entityType: "order",
       entityId: orderId,
       metadata: {
         previousStatus: currentOrder.status,
@@ -488,14 +599,30 @@ export async function updateOrderDraft(
       throw new Error("Order changed before this update. Refresh and try again.");
     }
 
-    for (const item of nextItems) {
+    if (nextItems.length > 0) {
       await tx
         .update(orderItems)
         .set({
-          quantity: item.quantity,
-          lineTotal: item.lineTotal,
+          quantity: buildOrderItemCaseValue(
+            nextItems,
+            orderItems.quantity,
+            (item) => item.quantity,
+          ),
+          lineTotal: buildOrderItemCaseValue(
+            nextItems,
+            orderItems.lineTotal,
+            (item) => item.lineTotal,
+          ),
         })
-        .where(and(eq(orderItems.id, item.id), eq(orderItems.orderId, orderId)));
+        .where(
+          and(
+            eq(orderItems.orderId, orderId),
+            inArray(
+              orderItems.id,
+              nextItems.map((item) => item.id),
+            ),
+          ),
+        );
     }
 
     if (removedItemIds.length > 0) {
@@ -504,11 +631,10 @@ export async function updateOrderDraft(
         .where(and(eq(orderItems.orderId, orderId), inArray(orderItems.id, removedItemIds)));
     }
 
-    await tx.insert(activityLogs).values({
+    await logActivityTx(tx, {
       companyId: context.company.id,
       userId: context.userId,
       eventType: "order.updated",
-      entityType: "order",
       entityId: orderId,
       metadata: {
         actorRole: context.companyUser.role,
@@ -540,7 +666,15 @@ export async function updateOrderDraft(
               afterQuantity: nextItem.quantity,
             };
           })
-          .filter((entry) => Boolean(entry)),
+          .filter(
+            (
+              entry,
+            ): entry is {
+              productName: string;
+              beforeQuantity: number;
+              afterQuantity: number;
+            } => Boolean(entry),
+          ),
         removedItems: existingItems
           .filter((item) => removedItemIds.includes(item.id))
           .map((item) => ({
@@ -555,6 +689,28 @@ export async function updateOrderDraft(
     totalAmount,
     notes: nextNotes,
   };
+}
+
+function buildOrderItemCaseValue<TValue extends number>(
+  items: Array<{
+    id: string;
+    quantity: number;
+    lineTotal: number;
+  }>,
+  fallbackColumn: typeof orderItems.quantity | typeof orderItems.lineTotal,
+  getValue: (item: { id: string; quantity: number; lineTotal: number }) => TValue,
+) {
+  return sql`
+    case
+      ${sql.join(
+        items.map(
+          (item) => sql`when ${orderItems.id} = ${item.id} then ${getValue(item)}`,
+        ),
+        sql` `,
+      )}
+      else ${fallbackColumn}
+    end
+  `;
 }
 
 function buildOrderTimeline(

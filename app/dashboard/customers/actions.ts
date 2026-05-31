@@ -166,7 +166,6 @@ export async function setupCustomerPortalLoginAction(
       companyId: context.company.id,
       userId: context.userId,
       eventType: existingUser ? "customer.portal_password_updated" : "customer.portal_login_created",
-      entityType: "customer",
       entityId: customer.id,
       metadata: {
         email: customer.email,
@@ -320,7 +319,6 @@ export async function generateCustomerPortalSetupLinkAction(
         companyId: context.company.id,
         userId: context.userId,
         eventType: "customer.portal_setup_link_generated",
-        entityType: "customer",
         entityId: customer.id,
         metadata: {
           email: customer.email,
@@ -371,7 +369,6 @@ export async function generateCustomerPortalSetupLinkAction(
       companyId: context.company.id,
       userId: context.userId,
       eventType: "customer.portal_setup_link_generated",
-      entityType: "customer",
       entityId: customer.id,
       metadata: {
         email: customer.email,
@@ -470,7 +467,6 @@ async function sendCustomerPortalSetupEmail(
     companyId: context.company.id,
     userId: context.userId,
     eventType: "customer.portal_setup_email_sent",
-    entityType: "customer",
     entityId: customer.id,
     metadata: {
       email: customer.email,
