@@ -20,12 +20,12 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - The order system now enforces strict status transitions, logs audit events and shows an order timeline in the dashboard.
 - Buyer reorder flow is available from portal order history for faster repeat ordering.
 - Authentication and authorization run through Supabase auth plus company-scoped memberships in `company_users`.
+- Buyer identity is linked through the explicit `customers.portal_user_id` model instead of e-mail-driven matching.
+- Multi-company users now select an active company before entering the dashboard or portal, so company context is explicit instead of implicit.
+- Business server actions and protected dashboard downloads validate auth plus company context before returning data.
 
 ## What Still Needs Work
 
-- Identity hardening:
-  - make company selection explicit for users who can belong to more than one company
-  - audit all server actions for strict company-scoped entity checks
 - Automation engine:
   - add DB-backed rules with simple conditions and actions
   - support first actions such as auto-confirm, assign owner and stale-order reminders
