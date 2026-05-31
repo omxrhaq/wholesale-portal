@@ -20,13 +20,12 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - The order system now enforces strict status transitions, logs audit events and shows an order timeline in the dashboard.
 - Buyer reorder flow is available from portal order history for faster repeat ordering.
 - Authentication and authorization run through Supabase auth plus company-scoped memberships in `company_users`.
+- Buyer identity is linked through the explicit `customers.portal_user_id` model instead of e-mail-driven matching.
+- Multi-company users now select an active company before entering the dashboard or portal, so company context is explicit instead of implicit.
+- Business server actions and protected dashboard downloads validate auth plus company context before returning data.
 
 ## What Still Needs Work
 
-- Identity hardening:
-  - replace remaining email-driven buyer linking flows with an explicit `portalUserId` model
-  - make company selection explicit for users who can belong to more than one company
-  - audit all server actions for strict company-scoped entity checks
 - Automation engine:
   - add DB-backed rules with simple conditions and actions
   - support first actions such as auto-confirm, assign owner and stale-order reminders
@@ -78,6 +77,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `/portal`
 - `/portal/login`
 - `/reset-password`
+- `/select-company`
 
 ## Route Handlers
 
@@ -91,7 +91,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - Drizzle config: `drizzle.config.ts`
 - Generated SQL migrations: `drizzle/*.sql`
 - Company scoping is handled with `company_id` across business tables.
-- RLS is enabled on public app tables with policies based on `company_users` roles and `customers.auth_user_id`.
+- RLS is enabled on public app tables with policies based on `company_users` roles and `customers.portal_user_id`.
 - New public tables automatically get RLS enabled through the `ensure_rls_on_public_tables` event trigger.
 - Order items store product name and price snapshots at order time.
 - Activity logs are used as the audit trail for customer, product and order events.
@@ -106,6 +106,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0005_absent_red_ghost.sql`
 - `0006_auto_enable_rls_new_tables.sql`
 - `0007_product_categories.sql`
+- `0008_portal_user_identity.sql`
 
 ## Environment
 

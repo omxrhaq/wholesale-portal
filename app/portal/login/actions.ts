@@ -1,17 +1,26 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
+import { clearActiveCompanyId, setActiveCompanyId } from "@/lib/companies/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { companyUsers } from "@/lib/db/schema";
+import { companies, companyUsers } from "@/lib/db/schema";
 import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 import { loginSchema } from "@/lib/validation/auth";
 
 type LoginState = {
   error?: string;
 };
+
+function getSafeNextPath(next: string | null | undefined, fallback: string) {
+  if (next && next.startsWith("/") && !next.startsWith("//")) {
+    return next;
+  }
+
+  return fallback;
+}
 
 export async function portalLoginAction(
   _state: LoginState,
@@ -51,38 +60,54 @@ export async function portalLoginAction(
     };
   }
 
-  const [membership] = await db
+  const memberships = await db
     .select({
       companyId: companyUsers.companyId,
       role: companyUsers.role,
     })
     .from(companyUsers)
+    .innerJoin(companies, eq(companyUsers.companyId, companies.id))
     .where(eq(companyUsers.userId, user.id))
-    .limit(1);
+    .orderBy(asc(companies.name), asc(companyUsers.createdAt));
 
-  if (
-    !membership ||
-    !["buyer", "wholesaler_owner", "wholesaler_staff"].includes(membership.role)
-  ) {
+  const portalMemberships = [];
+
+  for (const membership of memberships) {
+    if (
+      !["buyer", "wholesaler_owner", "wholesaler_staff"].includes(membership.role)
+    ) {
+      continue;
+    }
+
+    if (membership.role === "buyer") {
+      const activeCustomer = await getActivePortalCustomer(
+        membership.companyId,
+        user.id,
+      );
+
+      if (!activeCustomer) {
+        continue;
+      }
+    }
+
+    portalMemberships.push(membership);
+  }
+
+  if (portalMemberships.length === 0) {
     await supabase.auth.signOut();
+    await clearActiveCompanyId();
     return {
       error: "Your account is not allowed to access the portal.",
     };
   }
 
-  if (membership.role === "buyer") {
-    const activeCustomer = await getActivePortalCustomer(
-      membership.companyId,
-      user.id,
-    );
+  const nextPath = getSafeNextPath(parsed.data.next, "/portal");
 
-    if (!activeCustomer) {
-      await supabase.auth.signOut();
-      return {
-        error: "This buyer account is inactive. Contact the wholesaler for access.",
-      };
-    }
+  if (portalMemberships.length === 1) {
+    await setActiveCompanyId(portalMemberships[0].companyId);
+    redirect(nextPath);
   }
 
-  redirect(parsed.data.next || "/portal");
+  await clearActiveCompanyId();
+  redirect(`/select-company?mode=portal&next=${encodeURIComponent(nextPath)}`);
 }

@@ -5,7 +5,7 @@ import { customers } from "@/lib/db/schema";
 
 export async function getActivePortalCustomer(
   companyId: string,
-  authUserId: string,
+  portalUserId: string,
 ) {
   const [customer] = await db
     .select({
@@ -17,7 +17,7 @@ export async function getActivePortalCustomer(
     .where(
       and(
         eq(customers.companyId, companyId),
-        eq(customers.authUserId, authUserId),
+        eq(customers.portalUserId, portalUserId),
         eq(customers.isActive, true),
       ),
     )

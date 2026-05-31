@@ -175,38 +175,16 @@ async function main() {
         continue;
       }
 
-      const linkedCustomers = await sql.unsafe(
+      const customerMatches = await sql.unsafe(
         `
-          update public.customers
-          set auth_user_id = $1,
-              updated_at = now()
-          where company_id = $2
-            and lower(email) = lower($3)
-            and (auth_user_id is null or auth_user_id = $1)
-            and not exists (
-              select 1
-              from public.customers existing
-              where existing.company_id = $2
-                and existing.auth_user_id = $1
-                and existing.id <> public.customers.id
-            )
-          returning id, name, email
+          select id, name, email
+          from public.customers
+          where company_id = $1
+            and portal_user_id = $2
+          limit 1
         `,
-        [authUser.id, companyId, authUser.email],
+        [companyId, authUser.id],
       );
-
-      const customerMatches = linkedCustomers.length > 0
-        ? linkedCustomers
-        : await sql.unsafe(
-            `
-              select id, name, email
-              from public.customers
-              where company_id = $1
-                and auth_user_id = $2
-              limit 1
-            `,
-            [companyId, authUser.id],
-          );
 
       if (customerMatches.length === 0) {
         continue;
@@ -236,7 +214,7 @@ async function main() {
     select
       (select count(*)::int from public.companies where slug = 'demo-wholesale') as companies,
       (select count(*)::int from public.customers where company_id = '${companyId}') as customers,
-      (select count(*)::int from public.customers where company_id = '${companyId}' and auth_user_id is not null) as linked_customers,
+      (select count(*)::int from public.customers where company_id = '${companyId}' and portal_user_id is not null) as linked_customers,
       (select count(*)::int from public.product_categories where company_id = '${companyId}') as product_categories,
       (select count(*)::int from public.products where company_id = '${companyId}') as products,
       (select count(*)::int from public.orders where company_id = '${companyId}') as orders,

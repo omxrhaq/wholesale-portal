@@ -55,6 +55,94 @@ export function getCommonCopy(locale: CopyLocale) {
   return copy[locale];
 }
 
+export function getCompanyCopy(locale: CopyLocale) {
+  const copy = {
+    en: {
+      company: "Company",
+      workspace: "Workspace",
+      security: "Security",
+      switchFailed: "Could not switch company.",
+      chooseCompanyTitle: "Choose your company",
+      chooseDashboardCompanyDescription:
+        "Select the wholesale workspace you want to manage before continuing.",
+      choosePortalCompanyDescription:
+        "Select the company portal you want to open before continuing.",
+      companySelectionFeature:
+        "Keep your working context explicit when you belong to more than one company.",
+      workspaceSelectionFeature:
+        "Open the right dashboard or buyer portal without leaking data across tenants.",
+      securitySelectionFeature:
+        "Every query stays pinned to the company you selected for this session.",
+      roleLabels: {
+        wholesaler_owner: "Owner",
+        wholesaler_staff: "Staff",
+        buyer: "Buyer",
+      },
+    },
+    nl: {
+      company: "Bedrijf",
+      workspace: "Werkruimte",
+      security: "Beveiliging",
+      switchFailed: "Kon niet van bedrijf wisselen.",
+      chooseCompanyTitle: "Kies je bedrijf",
+      chooseDashboardCompanyDescription:
+        "Selecteer eerst welke groothandelswerkruimte je wilt beheren.",
+      choosePortalCompanyDescription:
+        "Selecteer eerst welk bedrijfsportaal je wilt openen.",
+      companySelectionFeature:
+        "Hou je werkcontext expliciet wanneer je tot meer dan één bedrijf behoort.",
+      workspaceSelectionFeature:
+        "Open het juiste dashboard of klantportaal zonder data tussen tenants te mengen.",
+      securitySelectionFeature:
+        "Elke query blijft vastgepind op het bedrijf dat je in deze sessie selecteert.",
+      roleLabels: {
+        wholesaler_owner: "Owner",
+        wholesaler_staff: "Staff",
+        buyer: "Klant",
+      },
+    },
+    fr: {
+      company: "Entreprise",
+      workspace: "Espace",
+      security: "Securite",
+      switchFailed: "Impossible de changer d'entreprise.",
+      chooseCompanyTitle: "Choisissez votre entreprise",
+      chooseDashboardCompanyDescription:
+        "Selectionnez d'abord l'espace grossiste que vous voulez gerer.",
+      choosePortalCompanyDescription:
+        "Selectionnez d'abord le portail entreprise que vous voulez ouvrir.",
+      companySelectionFeature:
+        "Gardez un contexte explicite lorsque vous appartenez a plusieurs entreprises.",
+      workspaceSelectionFeature:
+        "Ouvrez le bon tableau de bord ou portail client sans melanger les donnees entre tenants.",
+      securitySelectionFeature:
+        "Chaque requete reste liee a l'entreprise choisie pour cette session.",
+      roleLabels: {
+        wholesaler_owner: "Owner",
+        wholesaler_staff: "Staff",
+        buyer: "Client",
+      },
+    },
+  } satisfies Record<
+    CopyLocale,
+    {
+      company: string;
+      workspace: string;
+      security: string;
+      switchFailed: string;
+      chooseCompanyTitle: string;
+      chooseDashboardCompanyDescription: string;
+      choosePortalCompanyDescription: string;
+      companySelectionFeature: string;
+      workspaceSelectionFeature: string;
+      securitySelectionFeature: string;
+      roleLabels: Record<"wholesaler_owner" | "wholesaler_staff" | "buyer", string>;
+    }
+  >;
+
+  return copy[locale];
+}
+
 export function getCustomerCopy(locale: CopyLocale) {
   const copy = {
     en: {

@@ -4,9 +4,11 @@ import Link from "next/link";
 import { KeyRound, Menu, Package2, ShoppingCart, Users, X } from "lucide-react";
 import { useState } from "react";
 
+import { CompanySwitcher } from "@/components/dashboard/company-switcher";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import type { CompanyMembershipSummary } from "@/lib/companies/context";
 import { getCommonCopy, type CopyLocale } from "@/lib/i18n-copy";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +22,14 @@ const navIcons = {
 
 export function MobileDashboardNav({
   currentLocale,
+  currentCompanyId,
+  companyMemberships,
   copy,
   links,
 }: {
   currentLocale: CopyLocale;
+  currentCompanyId: string;
+  companyMemberships: CompanyMembershipSummary[];
   copy: ReturnType<typeof getCommonCopy>;
   links: Array<{
     href: string;
@@ -93,6 +99,12 @@ export function MobileDashboardNav({
             </nav>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              <CompanySwitcher
+                currentLocale={currentLocale}
+                currentCompanyId={currentCompanyId}
+                memberships={companyMemberships}
+                mode="dashboard"
+              />
               <ThemeToggle
                 label={copy.theme}
                 lightLabel={copy.lightMode}

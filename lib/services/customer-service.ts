@@ -152,22 +152,22 @@ export async function setCustomerActive(
   return customer;
 }
 
-export async function linkCustomerToAuthUser(
+export async function linkCustomerToPortalUser(
   context: CompanyContext,
   customerId: string,
-  authUserId: string,
+  portalUserId: string,
 ) {
   return db.transaction(async (tx) => {
     await tx
       .update(customers)
       .set({
-        authUserId: null,
+        portalUserId: null,
         updatedAt: new Date(),
       })
       .where(
         and(
           eq(customers.companyId, context.company.id),
-          eq(customers.authUserId, authUserId),
+          eq(customers.portalUserId, portalUserId),
           ne(customers.id, customerId),
         ),
       );
@@ -175,7 +175,7 @@ export async function linkCustomerToAuthUser(
     const [customer] = await tx
       .update(customers)
       .set({
-        authUserId,
+        portalUserId,
         updatedAt: new Date(),
       })
       .where(and(eq(customers.id, customerId), eq(customers.companyId, context.company.id)))

@@ -2,6 +2,7 @@ import { KeyRound, Package2, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { CompanySwitcher } from "@/components/dashboard/company-switcher";
 import { LanguageSwitcher } from "@/components/dashboard/language-switcher";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BuyerPortalClient } from "@/components/portal/buyer-portal-client";
@@ -12,7 +13,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { requireAuthUser } from "@/lib/auth/session";
 import { getCommonCopy, getPasswordCopy, getPortalCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
-import { requireCompanyContext } from "@/lib/companies/context";
+import {
+  listCurrentUserCompanyMemberships,
+  requireCompanyContext,
+} from "@/lib/companies/context";
 import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 import { getPortalOrderHistory } from "@/lib/services/portal-service";
 import { listProducts } from "@/lib/services/product-service";
@@ -28,12 +32,29 @@ export default async function PortalPage() {
   const t = getPortalCopy(locale);
   const passwordCopy = getPasswordCopy(locale);
   const common = getCommonCopy(locale);
+  const allPortalMemberships = await listCurrentUserCompanyMemberships([
+    "buyer",
+    "wholesaler_owner",
+    "wholesaler_staff",
+  ]);
   const products = await listProducts(context.company.id);
   const activeProducts = products.filter((product) => product.isActive);
   const matchedCustomer = await getActivePortalCustomer(
     context.company.id,
     authUser.id,
   );
+  const accessiblePortalMemberships = (
+    await Promise.all(
+      allPortalMemberships.map(async (membership) => {
+        if (membership.role !== "buyer") {
+          return membership;
+        }
+
+        const customer = await getActivePortalCustomer(membership.companyId, authUser.id);
+        return customer ? membership : null;
+      }),
+    )
+  ).filter((membership) => membership !== null);
 
   if (!matchedCustomer && context.companyUser.role === "buyer") {
     redirect("/portal/logout?reason=inactive-buyer");
@@ -53,6 +74,12 @@ export default async function PortalPage() {
                 <CardTitle>{t.buyerPortal}</CardTitle>
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <CompanySwitcher
+                  currentLocale={locale}
+                  currentCompanyId={context.company.id}
+                  memberships={accessiblePortalMemberships}
+                  mode="portal"
+                />
                 <ThemeToggle
                   label={common.theme}
                   lightLabel={common.lightMode}
