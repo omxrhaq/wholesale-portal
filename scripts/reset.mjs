@@ -16,6 +16,7 @@ const sql = postgres(process.env.DATABASE_URL, {
 async function main() {
   await sql.unsafe(`
     truncate table
+      public.admin_audit_logs,
       public.activity_logs,
       public.imports,
       public.order_items,
@@ -23,6 +24,7 @@ async function main() {
       public.products,
       public.product_categories,
       public.customers,
+      public.super_admins,
       public.company_users,
       public.profiles,
       public.companies
@@ -34,6 +36,7 @@ async function main() {
       {
         reset: true,
         tables: [
+          "admin_audit_logs",
           "activity_logs",
           "imports",
           "order_items",
@@ -41,6 +44,7 @@ async function main() {
           "products",
           "product_categories",
           "customers",
+          "super_admins",
           "company_users",
           "profiles",
           "companies",

@@ -17,7 +17,8 @@
     "db:reset": "node scripts/reset.mjs",
     "db:seed": "node scripts/seed.mjs",
     "db:seed:activity-demo": "node scripts/seed-activity-demo.mjs",
-    "db:fresh": "npm run db:reset && npm run db:seed"
+    "db:fresh": "npm run db:reset && npm run db:seed",
+    "admin:grant": "node scripts/grant-super-admin.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

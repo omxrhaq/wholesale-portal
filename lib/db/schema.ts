@@ -55,6 +55,24 @@ export const profiles = pgTable(
   ],
 ).enableRLS();
 
+export const superAdmins = pgTable(
+  "super_admins",
+  {
+    userId: uuid("user_id").primaryKey(),
+    grantedBy: uuid("granted_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    pgPolicy("super_admins_select_self", {
+      for: "select",
+      to: "authenticated",
+      using: sql`${table.userId} = (select auth.uid())`,
+    }),
+  ],
+).enableRLS();
+
 export const companies = pgTable(
   "companies",
   {
@@ -414,6 +432,38 @@ export const activityLogs = pgTable(
         where cu.company_id = ${table.companyId}
           and cu.user_id = (select auth.uid())
           and cu.role in ('wholesaler_owner', 'wholesaler_staff')
+      )`,
+    }),
+  ],
+).enableRLS();
+
+export const adminAuditLogs = pgTable(
+  "admin_audit_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    adminUserId: uuid("admin_user_id").notNull(),
+    actionType: varchar("action_type", { length: 120 }).notNull(),
+    targetType: varchar("target_type", { length: 80 }).notNull(),
+    targetId: uuid("target_id"),
+    companyId: uuid("company_id").references(() => companies.id, {
+      onDelete: "set null",
+    }),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("admin_audit_logs_admin_idx").on(table.adminUserId),
+    index("admin_audit_logs_company_idx").on(table.companyId),
+    index("admin_audit_logs_target_idx").on(table.targetType, table.targetId),
+    pgPolicy("admin_audit_logs_select_super_admins", {
+      for: "select",
+      to: "authenticated",
+      using: sql`exists (
+        select 1
+        from super_admins sa
+        where sa.user_id = (select auth.uid())
       )`,
     }),
   ],

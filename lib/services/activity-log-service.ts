@@ -62,6 +62,10 @@ type ActivityMetadataMap = {
     sku: string;
     changes: ActivityFieldChange[];
   };
+  "product.reactivated": {
+    sku: string;
+    changes: ActivityFieldChange[];
+  };
   "order.created": {
     nextStatus: string;
     actorRole: string;
@@ -99,6 +103,7 @@ type ActivityEntityByEvent = {
   "product.created": "product";
   "product.updated": "product";
   "product.deactivated": "product";
+  "product.reactivated": "product";
   "order.created": "order";
   "order.status_changed": "order";
   "order.updated": "order";
@@ -128,6 +133,7 @@ const entityTypeByEvent: ActivityEntityByEvent = {
   "product.created": "product",
   "product.updated": "product",
   "product.deactivated": "product",
+  "product.reactivated": "product",
   "order.created": "order",
   "order.status_changed": "order",
   "order.updated": "order",

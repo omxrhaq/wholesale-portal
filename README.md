@@ -59,6 +59,9 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 
 - `/`
 - `/account/password`
+- `/admin`
+- `/admin/access-denied`
+- `/admin/companies/[companyId]`
 - `/dashboard`
 - `/dashboard/customers`
 - `/dashboard/customers/[id]/edit`
@@ -108,6 +111,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0007_product_categories.sql`
 - `0008_portal_user_identity.sql`
 - `0009_backfill_customer_portal_users.sql`
+- `0010_orange_titania.sql`
 
 ## Environment
 
@@ -124,6 +128,7 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 
 ## Commands
 
+- `npm run admin:grant` - `node scripts/grant-super-admin.mjs`
 - `npm run build` - `next build`
 - `npm run db:fresh` - `npm run db:reset && npm run db:seed`
 - `npm run db:generate` - `drizzle-kit generate`

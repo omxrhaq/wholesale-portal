@@ -15,9 +15,9 @@ import {
   setCustomerActive,
   updateCustomer,
 } from "@/lib/services/customer-service";
+import { sendCustomerPortalSetupEmail } from "@/lib/services/customer-portal-service";
 import { logActivity } from "@/lib/services/activity-log-service";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   customerPortalLoginSchema,
   customerSchema,
@@ -53,7 +53,11 @@ export async function createCustomerAction(
 
     if (customer.isActive && customer.email) {
       try {
-        await sendCustomerPortalSetupEmail(context, customer.id);
+        await sendCustomerPortalSetupEmail({
+          actorUserId: context.userId,
+          companyId: context.company.id,
+          customerId: customer.id,
+        });
       } catch (error) {
         revalidatePath("/dashboard");
         revalidatePath("/dashboard/customers");
@@ -235,7 +239,11 @@ export async function sendCustomerPortalSetupEmailAction(
       };
     }
 
-    await sendCustomerPortalSetupEmail(context, customerId);
+    await sendCustomerPortalSetupEmail({
+      actorUserId: context.userId,
+      companyId: context.company.id,
+      customerId,
+    });
     revalidatePath("/dashboard/customers");
     revalidatePath(`/dashboard/customers/${customerId}/edit`);
 
@@ -398,80 +406,6 @@ function getActionErrorMessage(error: unknown) {
   }
 
   return "Something went wrong. Please try again.";
-}
-
-async function sendCustomerPortalSetupEmail(
-  context: Awaited<ReturnType<typeof requireCompanyContext>>,
-  customerId: string,
-) {
-  const customer = await getCustomerById(context.company.id, customerId);
-
-  if (!customer) {
-    throw new Error("Customer not found.");
-  }
-
-  if (!customer.email) {
-    throw new Error("Add an email address to this customer first.");
-  }
-
-  if (!customer.isActive) {
-    throw new Error("Activate this customer before enabling portal login.");
-  }
-
-  const redirectTo = await buildBuyerPasswordSetupUrl();
-  const supabaseAdmin = createSupabaseAdminClient();
-  const existingUser = await resolveCustomerPortalAuthUser(supabaseAdmin, customer);
-
-  if (existingUser) {
-    await ensureBuyerAccess(
-      context.company.id,
-      customer.id,
-      existingUser.id,
-      customer.email,
-      customer.name,
-    );
-
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(customer.email, {
-      redirectTo,
-    });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-  } else {
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      customer.email,
-      {
-        redirectTo,
-        data: {
-          full_name: customer.name,
-        },
-      },
-    );
-
-    if (error || !data.user) {
-      throw new Error(error?.message ?? "Could not send the portal setup email.");
-    }
-
-    await ensureBuyerAccess(
-      context.company.id,
-      customer.id,
-      data.user.id,
-      customer.email,
-      customer.name,
-    );
-  }
-
-  await logActivity({
-    companyId: context.company.id,
-    userId: context.userId,
-    eventType: "customer.portal_setup_email_sent",
-    entityId: customer.id,
-    metadata: {
-      email: customer.email,
-    },
-  });
 }
 
 async function getAuthUserById(

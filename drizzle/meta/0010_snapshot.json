@@ -1,6 +1,6 @@
 {
-  "id": "a5c0ec6a-b943-4fe7-b80a-7f1d85a24743",
-  "prevId": "6a8d7fb1-1ee4-4b01-949b-d5c7e3e347f5",
+  "id": "1fd19315-d518-4f27-bfe0-9dff9a247d40",
+  "prevId": "90d0cf26-c8b1-4f22-bcc0-88e0f5ce4393",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -102,6 +102,145 @@
             "authenticated"
           ],
           "using": "exists (\n        select 1\n        from company_users cu\n        where cu.company_id = \"activity_logs\".\"company_id\"\n          and cu.user_id = (select auth.uid())\n          and cu.role in ('wholesaler_owner', 'wholesaler_staff')\n      )"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.admin_audit_logs": {
+      "name": "admin_audit_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "admin_user_id": {
+          "name": "admin_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action_type": {
+          "name": "action_type",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "admin_audit_logs_admin_idx": {
+          "name": "admin_audit_logs_admin_idx",
+          "columns": [
+            {
+              "expression": "admin_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_audit_logs_company_idx": {
+          "name": "admin_audit_logs_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "admin_audit_logs_target_idx": {
+          "name": "admin_audit_logs_target_idx",
+          "columns": [
+            {
+              "expression": "target_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_audit_logs_company_id_companies_id_fk": {
+          "name": "admin_audit_logs_company_id_companies_id_fk",
+          "tableFrom": "admin_audit_logs",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "admin_audit_logs_select_super_admins": {
+          "name": "admin_audit_logs_select_super_admins",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "exists (\n        select 1\n        from super_admins sa\n        where sa.user_id = (select auth.uid())\n      )"
         }
       },
       "checkConstraints": {},
@@ -918,7 +1057,7 @@
           "to": [
             "authenticated"
           ],
-          "using": "exists (\n        select 1\n        from company_users cu\n        where cu.company_id = \"product_categories\".\"company_id\"\n          and cu.user_id = (select auth.uid())\n          and (\n            cu.role in ('wholesaler_owner', 'wholesaler_staff')\n            or (\n              cu.role = 'buyer'\n              and exists (\n                select 1\n                from customers c\n                where c.company_id = \"product_categories\".\"company_id\"\n                  and c.portal_user_id = (select auth.uid())\n                  and c.is_active is true\n              )\n            )\n          )\n      )"
+          "using": "exists (\n        select 1\n        from company_users cu\n        where cu.company_id = \"product_categories\".\"company_id\"\n          and cu.user_id = (select auth.uid())\n          and (\n            cu.role in ('wholesaler_owner', 'wholesaler_staff')\n            or (\n              cu.role = 'buyer'\n              and exists (\n                select 1\n                from customers c\n                where c.company_id = \"product_categories\".\"company_id\"\n                and c.portal_user_id = (select auth.uid())\n                  and c.is_active is true\n              )\n            )\n          )\n      )"
         }
       },
       "checkConstraints": {},
@@ -1130,6 +1269,48 @@
             "authenticated"
           ],
           "using": "\"profiles\".\"id\" = (select auth.uid())"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.super_admins": {
+      "name": "super_admins",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "granted_by": {
+          "name": "granted_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "super_admins_select_self": {
+          "name": "super_admins_select_self",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "authenticated"
+          ],
+          "using": "\"super_admins\".\"user_id\" = (select auth.uid())"
         }
       },
       "checkConstraints": {},
