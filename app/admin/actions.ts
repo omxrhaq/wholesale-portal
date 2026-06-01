@@ -33,14 +33,22 @@ function getRequiredString(formData: FormData, name: string) {
   return value;
 }
 
+function getSafeReturnPath(formData: FormData, fallback: string) {
+  const value = formData.get("returnTo");
+  return typeof value === "string" && value.startsWith("/admin/") && !value.startsWith("//")
+    ? value
+    : fallback;
+}
+
 export async function setAdminCustomerActiveAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyPath = getSafeCompanyPath(formData.get("companyId"));
+  const returnPath = getSafeReturnPath(formData, companyPath);
   const customerId = formData.get("customerId");
   const nextActiveRaw = formData.get("nextActive");
 
   if (typeof customerId !== "string" || customerId.length === 0) {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   try {
@@ -51,13 +59,13 @@ export async function setAdminCustomerActiveAction(formData: FormData) {
       nextActiveRaw === "true",
     );
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
   revalidatePath(companyPath);
   redirect(
-    `${companyPath}?status=${
+    `${returnPath}?status=${
       nextActiveRaw === "true" ? "customer-reactivated" : "customer-deactivated"
     }`,
   );
@@ -66,10 +74,11 @@ export async function setAdminCustomerActiveAction(formData: FormData) {
 export async function sendAdminCustomerPortalSetupEmailAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyPath = getSafeCompanyPath(formData.get("companyId"));
+  const returnPath = getSafeReturnPath(formData, companyPath);
   const customerId = formData.get("customerId");
 
   if (typeof customerId !== "string" || customerId.length === 0) {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   try {
@@ -79,18 +88,19 @@ export async function sendAdminCustomerPortalSetupEmailAction(formData: FormData
       customerId,
     );
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
   revalidatePath(companyPath);
-  redirect(`${companyPath}?status=portal-email-sent`);
+  redirect(`${returnPath}?status=portal-email-sent`);
 }
 
 export async function updateAdminCustomerAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyId = getRequiredString(formData, "companyId");
   const companyPath = getSafeCompanyPath(companyId);
+  const returnPath = getSafeReturnPath(formData, companyPath);
 
   try {
     await updateCustomerAsSuperAdmin(admin, companyId, getRequiredString(formData, "customerId"), {
@@ -100,18 +110,19 @@ export async function updateAdminCustomerAction(formData: FormData) {
       isActive: formData.get("isActive") === "on",
     });
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
   revalidatePath(companyPath);
-  redirect(`${companyPath}?status=customer-updated`);
+  redirect(`${returnPath}?status=customer-updated`);
 }
 
 export async function setAdminProductActiveAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyId = getRequiredString(formData, "companyId");
   const companyPath = getSafeCompanyPath(companyId);
+  const returnPath = getSafeReturnPath(formData, companyPath);
   const nextActive = formData.get("nextActive") === "true";
 
   try {
@@ -122,19 +133,20 @@ export async function setAdminProductActiveAction(formData: FormData) {
       nextActive,
     );
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
   revalidatePath(companyPath);
   revalidatePath("/portal");
-  redirect(`${companyPath}?status=${nextActive ? "product-reactivated" : "product-deactivated"}`);
+  redirect(`${returnPath}?status=${nextActive ? "product-reactivated" : "product-deactivated"}`);
 }
 
 export async function updateAdminOrderStatusAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyId = getRequiredString(formData, "companyId");
   const companyPath = getSafeCompanyPath(companyId);
+  const returnPath = getSafeReturnPath(formData, companyPath);
   const nextStatus = formData.get("nextStatus");
 
   try {
@@ -149,7 +161,7 @@ export async function updateAdminOrderStatusAction(formData: FormData) {
       nextStatus as OrderStatus,
     );
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
@@ -157,13 +169,14 @@ export async function updateAdminOrderStatusAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/orders");
   revalidatePath("/portal");
-  redirect(`${companyPath}?status=order-status-updated`);
+  redirect(`${returnPath}?status=order-status-updated`);
 }
 
 export async function updateAdminProductAction(formData: FormData) {
   const admin = await requireSuperAdmin();
   const companyId = getRequiredString(formData, "companyId");
   const companyPath = getSafeCompanyPath(companyId);
+  const returnPath = getSafeReturnPath(formData, companyPath);
 
   try {
     await updateProductAsSuperAdmin(admin, companyId, getRequiredString(formData, "productId"), {
@@ -176,11 +189,11 @@ export async function updateAdminProductAction(formData: FormData) {
       isActive: formData.get("isActive") === "on",
     });
   } catch {
-    redirect(`${companyPath}?error=support-action`);
+    redirect(`${returnPath}?error=support-action`);
   }
 
   revalidatePath("/admin");
   revalidatePath(companyPath);
   revalidatePath("/portal");
-  redirect(`${companyPath}?status=product-updated`);
+  redirect(`${returnPath}?status=product-updated`);
 }

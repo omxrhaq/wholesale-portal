@@ -154,6 +154,7 @@ export const customers = pgTable(
   (table) => [
     index("customers_company_idx").on(table.companyId),
     index("customers_company_active_idx").on(table.companyId, table.isActive),
+    index("customers_company_name_idx").on(table.companyId, table.name, table.id),
     index("customers_portal_user_idx").on(table.portalUserId),
     uniqueIndex("customers_company_portal_user_idx").on(
       table.companyId,
@@ -251,6 +252,7 @@ export const products = pgTable(
   (table) => [
     uniqueIndex("products_company_sku_idx").on(table.companyId, table.sku),
     index("products_company_active_idx").on(table.companyId, table.isActive),
+    index("products_company_updated_idx").on(table.companyId, table.updatedAt, table.id),
     pgPolicy("products_select_company_members", {
       for: "select",
       to: "authenticated",
@@ -304,6 +306,8 @@ export const orders = pgTable(
   },
   (table) => [
     index("orders_company_idx").on(table.companyId),
+    index("orders_company_created_idx").on(table.companyId, table.createdAt, table.id),
+    index("orders_company_status_created_idx").on(table.companyId, table.status, table.createdAt),
     index("orders_customer_idx").on(table.customerId),
     pgPolicy("orders_select_company_staff_or_own_buyer", {
       for: "select",

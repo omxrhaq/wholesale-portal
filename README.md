@@ -62,6 +62,11 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `/admin`
 - `/admin/access-denied`
 - `/admin/companies/[companyId]`
+- `/admin/companies/[companyId]/customers`
+- `/admin/companies/[companyId]/customers/[customerId]`
+- `/admin/companies/[companyId]/orders`
+- `/admin/companies/[companyId]/products`
+- `/admin/companies/[companyId]/products/[productId]`
 - `/dashboard`
 - `/dashboard/customers`
 - `/dashboard/customers/[id]/edit`
@@ -112,6 +117,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0008_portal_user_identity.sql`
 - `0009_backfill_customer_portal_users.sql`
 - `0010_orange_titania.sql`
+- `0011_closed_mercury.sql`
 
 ## Environment
 

@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, lt, or, sql } from "drizzle-orm";
 
 import type { SuperAdminContext } from "@/lib/admin/auth";
 import { db } from "@/lib/db";
@@ -7,6 +7,7 @@ import {
   companyUsers,
   customers,
   orders,
+  orderItems,
   products,
   profiles,
 } from "@/lib/db/schema";
@@ -19,10 +20,10 @@ import {
 import { sendCustomerPortalSetupEmail } from "@/lib/services/customer-portal-service";
 import { buildFieldChanges } from "@/lib/services/activity-log-service";
 import { listRecentActivity } from "@/lib/services/activity-log-service";
-import { listCustomers } from "@/lib/services/customer-service";
 import { listOrders } from "@/lib/services/order-service";
-import { listProducts } from "@/lib/services/product-service";
 import { updateProduct } from "@/lib/services/product-service";
+import { getProductById } from "@/lib/services/product-service";
+import { getCustomerById } from "@/lib/services/customer-service";
 import { canTransitionOrderStatus } from "@/lib/orders";
 import { customerSchema, type CustomerInput } from "@/lib/validation/customer";
 import type { OrderStatus } from "@/lib/db/schema";
@@ -164,12 +165,10 @@ export async function getAdminCompanyWorkspace(companyId: string) {
     return null;
   }
 
-  const [members, customerRows, productRows, recentOrders, recentTenantActivity, recentAdminActivity] =
+  const [members, recentOrders, recentTenantActivity, recentAdminActivity] =
     await Promise.all([
-      listAdminCompanyMembers(companyId),
-      listCustomers(companyId),
-      listProducts(companyId),
-      listOrders({ companyId, pageSize: 100, sort: "created_desc" }),
+      listAdminCompanyMembers(companyId, 8),
+      listOrders({ companyId, pageSize: 5, sort: "created_desc" }),
       listRecentActivity(companyId, 8),
       listAdminAuditForCompany(companyId, 8),
     ]);
@@ -177,16 +176,14 @@ export async function getAdminCompanyWorkspace(companyId: string) {
   return {
     company,
     members,
-    customers: customerRows,
-    products: productRows,
     recentOrders: recentOrders.rows,
     recentTenantActivity,
     recentAdminActivity,
   };
 }
 
-export async function listAdminCompanyMembers(companyId: string) {
-  return db
+export async function listAdminCompanyMembers(companyId: string, limit?: number) {
+  const query = db
     .select({
       id: companyUsers.id,
       userId: companyUsers.userId,
@@ -199,6 +196,190 @@ export async function listAdminCompanyMembers(companyId: string) {
     .leftJoin(profiles, eq(companyUsers.userId, profiles.id))
     .where(eq(companyUsers.companyId, companyId))
     .orderBy(asc(companyUsers.role), asc(profiles.fullName), asc(profiles.email));
+
+  return limit ? query.limit(limit) : query;
+}
+
+type AdminListInput = {
+  companyId: string;
+  query?: string;
+  cursor?: string;
+  direction?: "next" | "prev";
+  pageSize?: number;
+};
+
+export async function listAdminCustomers({
+  companyId,
+  query = "",
+  cursor,
+  direction = "next",
+  pageSize = 25,
+}: AdminListInput) {
+  const search = query.trim();
+  const filters = [eq(customers.companyId, companyId)];
+
+  if (search) {
+    const pattern = `%${search}%`;
+    filters.push(or(ilike(customers.name, pattern), ilike(customers.email, pattern), ilike(customers.phone, pattern))!);
+  }
+
+  const summaryWhere = and(...filters);
+  const decodedCursor = decodeCursor<{ name: string; id: string }>(cursor);
+  if (decodedCursor && typeof decodedCursor.name === "string" && typeof decodedCursor.id === "string") {
+    filters.push(
+      direction === "prev"
+        ? or(lt(customers.name, decodedCursor.name), and(eq(customers.name, decodedCursor.name), lt(customers.id, decodedCursor.id)))!
+        : or(gt(customers.name, decodedCursor.name), and(eq(customers.name, decodedCursor.name), gt(customers.id, decodedCursor.id)))!,
+    );
+  }
+
+  const where = and(...filters);
+  const [summary, rows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(customers).where(summaryWhere),
+    db.select().from(customers).where(where).orderBy(
+      direction === "prev" ? desc(customers.name) : asc(customers.name),
+      direction === "prev" ? desc(customers.id) : asc(customers.id),
+    ).limit(pageSize + 1),
+  ]);
+
+  return toCursorPage(direction === "prev" ? rows.reverse() : rows, Number(summary[0]?.count ?? 0), pageSize, (row) => ({ name: row.name, id: row.id }), Boolean(cursor), direction);
+}
+
+export async function listAdminProducts({
+  companyId,
+  query = "",
+  cursor,
+  direction = "next",
+  pageSize = 25,
+}: AdminListInput) {
+  const search = query.trim();
+  const filters = [eq(products.companyId, companyId)];
+
+  if (search) {
+    const pattern = `%${search}%`;
+    filters.push(or(ilike(products.name, pattern), ilike(products.sku, pattern))!);
+  }
+
+  const summaryWhere = and(...filters);
+  const decodedCursor = decodeCursor<{ updatedAt: string; id: string }>(cursor);
+  if (decodedCursor && typeof decodedCursor.updatedAt === "string" && typeof decodedCursor.id === "string") {
+    const updatedAt = parseCursorDate(decodedCursor.updatedAt);
+    if (!updatedAt) return listAdminProducts({ companyId, query, pageSize });
+    filters.push(
+      direction === "prev"
+        ? or(gt(products.updatedAt, updatedAt), and(eq(products.updatedAt, updatedAt), gt(products.id, decodedCursor.id)))!
+        : or(lt(products.updatedAt, updatedAt), and(eq(products.updatedAt, updatedAt), lt(products.id, decodedCursor.id)))!,
+    );
+  }
+
+  const where = and(...filters);
+  const [summary, rows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(products).where(summaryWhere),
+    db.select().from(products).where(where).orderBy(
+      direction === "prev" ? asc(products.updatedAt) : desc(products.updatedAt),
+      direction === "prev" ? asc(products.id) : desc(products.id),
+    ).limit(pageSize + 1),
+  ]);
+
+  return toCursorPage(direction === "prev" ? rows.reverse() : rows, Number(summary[0]?.count ?? 0), pageSize, (row) => ({ updatedAt: row.updatedAt.toISOString(), id: row.id }), Boolean(cursor), direction);
+}
+
+export async function listAdminOrders({
+  companyId,
+  query = "",
+  cursor,
+  direction = "next",
+  pageSize = 25,
+}: AdminListInput) {
+  const search = query.trim();
+  const filters = [eq(orders.companyId, companyId)];
+
+  if (search) {
+    const pattern = `%${search}%`;
+    filters.push(or(ilike(customers.name, pattern), ilike(customers.email, pattern), sql`cast(${orders.id} as text) ilike ${pattern}`)!);
+  }
+
+  const summaryWhere = and(...filters);
+  const decodedCursor = decodeCursor<{ createdAt: string; id: string }>(cursor);
+  if (decodedCursor && typeof decodedCursor.createdAt === "string" && typeof decodedCursor.id === "string") {
+    const createdAt = parseCursorDate(decodedCursor.createdAt);
+    if (!createdAt) return listAdminOrders({ companyId, query, pageSize });
+    filters.push(
+      direction === "prev"
+        ? or(gt(orders.createdAt, createdAt), and(eq(orders.createdAt, createdAt), gt(orders.id, decodedCursor.id)))!
+        : or(lt(orders.createdAt, createdAt), and(eq(orders.createdAt, createdAt), lt(orders.id, decodedCursor.id)))!,
+    );
+  }
+
+  const where = and(...filters);
+  const [summary, rows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(orders).innerJoin(customers, eq(orders.customerId, customers.id)).where(summaryWhere),
+    db.select({
+      id: orders.id,
+      status: orders.status,
+      totalAmount: orders.totalAmount,
+      createdAt: orders.createdAt,
+      customerName: customers.name,
+      itemCount: sql<number>`(select count(*) from ${orderItems} where ${orderItems.orderId} = ${orders.id})`.as("item_count"),
+    }).from(orders).innerJoin(customers, eq(orders.customerId, customers.id)).where(where).orderBy(
+      direction === "prev" ? asc(orders.createdAt) : desc(orders.createdAt),
+      direction === "prev" ? asc(orders.id) : desc(orders.id),
+    ).limit(pageSize + 1),
+  ]);
+
+  return toCursorPage(direction === "prev" ? rows.reverse() : rows, Number(summary[0]?.count ?? 0), pageSize, (row) => ({ createdAt: row.createdAt.toISOString(), id: row.id }), Boolean(cursor), direction);
+}
+
+export async function getAdminCustomer(companyId: string, customerId: string) {
+  return getCustomerById(companyId, customerId);
+}
+
+export async function getAdminProduct(companyId: string, productId: string) {
+  return getProductById(companyId, productId);
+}
+
+function toCursorPage<TRow, TCursor>(
+  rows: TRow[],
+  totalCount: number,
+  pageSize: number,
+  getCursor: (row: TRow) => TCursor,
+  hasCursor: boolean,
+  direction: "next" | "prev",
+) {
+  const pageRows = rows.slice(0, pageSize);
+  return {
+    rows: pageRows,
+    totalCount,
+    pageSize,
+    previousCursor: (directionHasPrevious(direction, rows, pageSize, hasCursor) && pageRows[0]) ? encodeCursor(getCursor(pageRows[0])) : null,
+    nextCursor: (directionHasNext(direction, rows, pageSize, hasCursor) && pageRows.at(-1)) ? encodeCursor(getCursor(pageRows.at(-1)!)) : null,
+  };
+}
+
+function directionHasPrevious(direction: "next" | "prev", rows: unknown[], pageSize: number, hasCursor: boolean) {
+  return direction === "prev" ? rows.length > pageSize : hasCursor;
+}
+
+function directionHasNext(direction: "next" | "prev", rows: unknown[], pageSize: number, hasCursor: boolean) {
+  return direction === "prev" ? hasCursor : rows.length > pageSize;
+}
+
+function encodeCursor(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function decodeCursor<T>(cursor?: string) {
+  if (!cursor) return null;
+  try {
+    return JSON.parse(Buffer.from(cursor, "base64url").toString("utf8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+function parseCursorDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export async function setCustomerActiveAsSuperAdmin(
@@ -230,7 +411,7 @@ export async function setCustomerActiveAsSuperAdmin(
         isActive,
         updatedAt: new Date(),
       })
-      .where(eq(customers.id, customerId))
+      .where(and(eq(customers.id, customerId), eq(customers.companyId, companyId)))
       .returning();
 
     if (!updatedCustomer) {
