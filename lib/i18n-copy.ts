@@ -169,6 +169,10 @@ export function getAdminCopy(locale: CopyLocale) {
       companyDetailTitle: "Company workspace",
       companyDetailDescription:
         "Review the tenant state, recent orders, members, customers, and audit trails from one safe support view.",
+      companyMetadataOnlyDescription:
+        "Platform operators can inspect tenant metadata only. Customer, catalog, and order content stays private to the tenant.",
+      privacySafeAuditDescription:
+        "Platform audit entries intentionally omit tenant record contents and customer-identifying metadata.",
       companyMembers: "Company members",
       customerSupport: "Customer support",
       productCatalog: "Product catalog",
@@ -248,6 +252,10 @@ export function getAdminCopy(locale: CopyLocale) {
       companyDetailTitle: "Bedrijfswerkruimte",
       companyDetailDescription:
         "Bekijk tenantstatus, recente orders, memberships, klanten en audit trails vanuit een veilige supportweergave.",
+      companyMetadataOnlyDescription:
+        "Platformbeheerders zien alleen tenantmetadata. Klant-, catalogus- en orderinhoud blijft prive voor de tenant.",
+      privacySafeAuditDescription:
+        "Platform-auditregels bevatten bewust geen tenantinhoud of klantidentificerende metadata.",
       companyMembers: "Bedrijfsmemberships",
       customerSupport: "Klantenondersteuning",
       productCatalog: "Productcatalogus",
@@ -327,6 +335,10 @@ export function getAdminCopy(locale: CopyLocale) {
       companyDetailTitle: "Espace entreprise",
       companyDetailDescription:
         "Consultez l'etat du tenant, les commandes recentes, les membres, les clients et les audits depuis une vue support securisee.",
+      companyMetadataOnlyDescription:
+        "Les operateurs plateforme voient uniquement les metadonnees du tenant. Le contenu client, catalogue et commande reste prive.",
+      privacySafeAuditDescription:
+        "Les audits plateforme excluent volontairement le contenu tenant et les metadonnees identifiantes.",
       companyMembers: "Membres de l'entreprise",
       customerSupport: "Support client",
       productCatalog: "Catalogue produits",

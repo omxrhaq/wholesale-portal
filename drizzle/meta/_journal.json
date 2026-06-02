@@ -85,6 +85,13 @@
       "when": 1780348939167,
       "tag": "0011_closed_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780353039705,
+      "tag": "0012_scrub_admin_audit_metadata",
+      "breakpoints": true
     }
   ]
 }

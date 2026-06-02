@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Boxes, ShoppingCart, Users } from "lucide-react";
+import { Building2, Users } from "lucide-react";
 
 import { AdminAuditHistory } from "@/components/admin/admin-audit-history";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,29 +24,13 @@ export default async function AdminPage() {
 
   return (
     <section className="grid gap-6">
-      <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-6">
+      <div className="grid gap-4 md:grid-cols-2">
         <MetricCard
           icon={Building2}
           label={copy.totalCompanies}
           value={String(stats.companyCount)}
         />
-        <MetricCard
-          icon={Users}
-          label={copy.totalCustomers}
-          value={String(stats.customerCount)}
-        />
-        <MetricCard
-          icon={Boxes}
-          label={copy.totalProducts}
-          value={String(stats.productCount)}
-        />
-        <MetricCard
-          icon={ShoppingCart}
-          label={copy.totalOrders}
-          value={String(stats.orderCount)}
-        />
         <MetricCard icon={Users} label={copy.totalStaff} value={String(stats.staffCount)} />
-        <MetricCard icon={Users} label={copy.totalBuyers} value={String(stats.buyerCount)} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
@@ -69,11 +53,7 @@ export default async function AdminPage() {
                   <thead className="bg-muted/70 text-left text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 font-medium">{copy.companies}</th>
-                      <th className="px-4 py-3 font-medium">{copy.totalCustomers}</th>
-                      <th className="px-4 py-3 font-medium">{copy.totalProducts}</th>
-                      <th className="px-4 py-3 font-medium">{copy.totalOrders}</th>
                       <th className="px-4 py-3 font-medium">{copy.staff}</th>
-                      <th className="px-4 py-3 font-medium">{copy.buyers}</th>
                       <th className="px-4 py-3 font-medium">{copy.created}</th>
                     </tr>
                   </thead>
@@ -86,11 +66,7 @@ export default async function AdminPage() {
                             <div className="text-xs text-muted-foreground">{company.slug}</div>
                           </Link>
                         </td>
-                        <td className="px-4 py-4 text-foreground/80">{company.customerCount}</td>
-                        <td className="px-4 py-4 text-foreground/80">{company.productCount}</td>
-                        <td className="px-4 py-4 text-foreground/80">{company.orderCount}</td>
                         <td className="px-4 py-4 text-foreground/80">{company.staffCount}</td>
-                        <td className="px-4 py-4 text-foreground/80">{company.buyerCount}</td>
                         <td className="px-4 py-4 text-foreground/80">
                           {formatDate(company.createdAt, locale)}
                         </td>

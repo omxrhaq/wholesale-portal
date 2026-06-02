@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { AdminCompanyNav } from "@/components/admin/admin-company-nav";
 import { Button } from "@/components/ui/button";
 
 export function AdminCompanyHeader({
@@ -22,7 +21,6 @@ export function AdminCompanyHeader({
         </Button>
       </div>
       <p className="max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
-      <AdminCompanyNav companyId={company.id} />
     </div>
   );
 }
