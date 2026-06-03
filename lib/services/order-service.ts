@@ -7,13 +7,11 @@ import {
   orderItems,
   orders,
   profiles,
-  products,
   type OrderStatus,
 } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
 import { canTransitionOrderStatus } from "@/lib/orders";
 import { orderEditSchema, type OrderEditInput } from "@/lib/validation/order-edit";
-import type { PortalOrderInput } from "@/lib/validation/portal-order";
 import {
   buildFieldChanges,
   logActivityTx,
@@ -322,113 +320,6 @@ export async function getOrderById(companyId: string, orderId: string) {
     items,
     timeline,
   };
-}
-
-export async function createPortalOrder(
-  context: CompanyContext,
-  portalUserId: string,
-  input: PortalOrderInput,
-) {
-  const customer = await db
-    .select({
-      id: customers.id,
-    })
-    .from(customers)
-    .where(
-      and(
-        eq(customers.companyId, context.company.id),
-        eq(customers.portalUserId, portalUserId),
-        eq(customers.isActive, true),
-      ),
-    )
-    .limit(1)
-    .then((rows) => rows[0] ?? null);
-
-  if (!customer) {
-    throw new Error("No active customer profile is linked to your account in this company.");
-  }
-
-  const requestedProductIds = input.items.map((item) => item.productId);
-  const selectedProducts = await db
-    .select({
-      id: products.id,
-      name: products.name,
-      price: products.price,
-    })
-    .from(products)
-    .where(
-      and(
-        eq(products.companyId, context.company.id),
-        eq(products.isActive, true),
-        inArray(products.id, requestedProductIds),
-      ),
-    );
-
-  if (selectedProducts.length !== requestedProductIds.length) {
-    throw new Error("One or more selected products are no longer available.");
-  }
-
-  const productById = new Map(selectedProducts.map((product) => [product.id, product]));
-  const orderLines = input.items.map((item) => {
-    const product = productById.get(item.productId);
-
-    if (!product) {
-      throw new Error("Product not found during order creation.");
-    }
-
-    const lineTotal = Number((product.price * item.quantity).toFixed(2));
-
-    return {
-      productId: product.id,
-      productNameSnapshot: product.name,
-      unitPrice: product.price,
-      quantity: item.quantity,
-      lineTotal,
-    };
-  });
-
-  const totalAmount = Number(
-    orderLines.reduce((sum, line) => sum + line.lineTotal, 0).toFixed(2),
-  );
-
-  const createdOrder = await db.transaction(async (tx) => {
-    const [newOrder] = await tx
-      .insert(orders)
-      .values({
-        companyId: context.company.id,
-        customerId: customer.id,
-        status: "new",
-        totalAmount,
-        notes: input.notes?.trim() ? input.notes.trim() : null,
-      })
-      .returning({ id: orders.id });
-
-    await tx.insert(orderItems).values(
-      orderLines.map((line) => ({
-        orderId: newOrder.id,
-        productId: line.productId,
-        productNameSnapshot: line.productNameSnapshot,
-        unitPrice: line.unitPrice,
-        quantity: line.quantity,
-        lineTotal: line.lineTotal,
-      })),
-    );
-
-    await logActivityTx(tx, {
-      companyId: context.company.id,
-      userId: context.userId,
-      eventType: "order.created",
-      entityId: newOrder.id,
-      metadata: {
-        nextStatus: "new",
-        actorRole: context.companyUser.role,
-      },
-    });
-
-    return newOrder;
-  });
-
-  return createdOrder;
 }
 
 export async function updateOrderStatus(

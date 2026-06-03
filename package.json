@@ -7,6 +7,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:unit": "vitest run",
+    "test:regression": "node scripts/test-regression.mjs baseline",
+    "test:regression:admin": "node scripts/test-regression.mjs baseline admin",
+    "test:regression:auth": "node scripts/test-regression.mjs baseline auth",
+    "test:regression:customers": "node scripts/test-regression.mjs baseline customers",
+    "test:regression:db": "node scripts/test-regression.mjs baseline db",
+    "test:regression:docs": "node scripts/test-regression.mjs baseline docs",
+    "test:regression:full": "node scripts/test-regression.mjs full",
+    "test:regression:imports": "node scripts/test-regression.mjs baseline imports",
+    "test:regression:order": "node scripts/test-regression.mjs baseline order",
+    "test:regression:products": "node scripts/test-regression.mjs baseline products",
+    "test:regression:ui": "node scripts/test-regression.mjs baseline ui",
     "prepare": "node scripts/install-git-hooks.mjs",
     "docs:update": "node scripts/update-readme.mjs",
     "docs:check": "node scripts/update-readme.mjs --check",
@@ -54,6 +66,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.8"
   }
 }

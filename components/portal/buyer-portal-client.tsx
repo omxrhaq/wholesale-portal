@@ -3,7 +3,10 @@
 import { Clock3, Search, ShoppingCart } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 
-import { placePortalOrderAction } from "@/app/portal/actions";
+import {
+  buildPortalReorderDraftAction,
+  placePortalOrderAction,
+} from "@/app/portal/actions";
 import { OrderStatusBadge } from "@/components/orders/order-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -109,6 +112,7 @@ export function BuyerPortalClient({
   const [quantities, setQuantities] = useState<Record<string, number>>(initialDraft.quantities);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingReorderId, setPendingReorderId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const deferredSearch = useDeferredValue(search);
 
@@ -193,30 +197,33 @@ export function BuyerPortalClient({
   }
 
   function handleReorder(orderId: string) {
-    const sourceOrder = orderHistory.find((order) => order.id === orderId);
-    if (!sourceOrder) {
-      return;
-    }
-
-    const allowedProductIds = new Set(products.map((product) => product.id));
-    const nextQuantities: Record<string, number> = { ...quantities };
-    let addedLines = 0;
-
-    for (const item of sourceOrder.items) {
-      if (allowedProductIds.has(item.productId)) {
-        nextQuantities[item.productId] = (nextQuantities[item.productId] ?? 0) + item.quantity;
-        addedLines += 1;
-      }
-    }
-
-    setQuantities(nextQuantities);
-    setFeedback(
-      formatTemplate(copy.orderCopied, {
-        id: orderId.slice(0, 8).toUpperCase(),
-        count: String(addedLines),
-      }),
-    );
+    setFeedback(null);
     setError(null);
+    setPendingReorderId(orderId);
+
+    startTransition(async () => {
+      const result = await buildPortalReorderDraftAction(orderId);
+
+      if (!result.success || !result.items) {
+        setError(result.error ?? copy.orderFailed);
+        setPendingReorderId(null);
+        return;
+      }
+
+      setQuantities(
+        Object.fromEntries(
+          result.items.map((item) => [item.productId, item.quantity]),
+        ),
+      );
+      setNotes(result.notes ?? "");
+      setFeedback(
+        formatTemplate(copy.orderCopied, {
+          id: (result.sourceOrderId ?? orderId).slice(0, 8).toUpperCase(),
+          count: String(result.items.length),
+        }),
+      );
+      setPendingReorderId(null);
+    });
   }
 
   function handlePlaceOrder() {
@@ -469,8 +476,9 @@ export function BuyerPortalClient({
                         variant="outline"
                         size="sm"
                         onClick={() => handleReorder(order.id)}
+                        disabled={isPending}
                       >
-                        {copy.reorder}
+                        {pendingReorderId === order.id ? copy.placingOrder : copy.reorder}
                       </Button>
                     </div>
                   </div>
