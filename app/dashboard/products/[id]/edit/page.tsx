@@ -47,6 +47,8 @@ export default async function EditProductPage({
           description: product.description ?? "",
           unit: product.unit,
           price: product.price,
+          stockQuantity: product.stockQuantity,
+          lowStockThreshold: product.lowStockThreshold,
           isActive: product.isActive,
         }}
         categoryNames={categories.map((category) => category.name)}

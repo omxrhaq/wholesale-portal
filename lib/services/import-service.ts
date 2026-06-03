@@ -65,6 +65,8 @@ export async function importProducts(
         description: string | null;
         unit: string;
         price: number;
+        stockQuantity: number;
+        lowStockThreshold: number;
         isActive: boolean;
         updatedAt: Date;
       }> = [];
@@ -103,6 +105,8 @@ export async function importProducts(
           description: row.description || null,
           unit: row.unit,
           price: row.price,
+          stockQuantity: row.stockQuantity,
+          lowStockThreshold: row.lowStockThreshold,
           isActive: row.isActive,
           updatedAt: new Date(),
         });
@@ -121,6 +125,8 @@ export async function importProducts(
               description: sql`excluded.description`,
               unit: sql`excluded.unit`,
               price: sql`excluded.price`,
+              stockQuantity: sql`excluded.stock_quantity`,
+              lowStockThreshold: sql`excluded.low_stock_threshold`,
               isActive: sql`excluded.is_active`,
               updatedAt: new Date(),
             },

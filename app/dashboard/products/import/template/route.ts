@@ -15,6 +15,8 @@ export async function GET() {
     { header: "Description", key: "description", width: 42 },
     { header: "Unit", key: "unit", width: 16 },
     { header: "Price", key: "price", width: 14 },
+    { header: "Stock", key: "stockQuantity", width: 14 },
+    { header: "Low stock threshold", key: "lowStockThreshold", width: 20 },
     { header: "Active", key: "isActive", width: 12 },
   ];
 
@@ -33,6 +35,8 @@ export async function GET() {
       description: "Full arabica blend for hospitality and office use.",
       unit: "bag",
       price: 18.5,
+      stockQuantity: 120,
+      lowStockThreshold: 20,
       isActive: "yes",
     },
     {
@@ -42,11 +46,15 @@ export async function GET() {
       description: "Foams consistently for coffee drinks.",
       unit: "box",
       price: 2.95,
+      stockQuantity: 80,
+      lowStockThreshold: 15,
       isActive: "yes",
     },
   ]);
 
   worksheet.getColumn("price").numFmt = "#,##0.00";
+  worksheet.getColumn("stockQuantity").numFmt = "0";
+  worksheet.getColumn("lowStockThreshold").numFmt = "0";
   worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
   const buffer = await workbook.xlsx.writeBuffer();

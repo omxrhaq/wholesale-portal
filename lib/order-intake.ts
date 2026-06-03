@@ -7,6 +7,7 @@ export type AvailableOrderProduct = {
   id: string;
   name: string;
   price: number;
+  stockQuantity: number;
 };
 
 export type OrderLineDraft = {
@@ -45,10 +46,6 @@ export function buildOrderLineDrafts(
     requireEveryProduct: boolean;
   },
 ): OrderLineDraft[] {
-  if (requireEveryProduct && availableProducts.length !== requestedItems.length) {
-    throw new Error("One or more selected products are no longer available.");
-  }
-
   const productById = new Map(availableProducts.map((product) => [product.id, product]));
   const orderLines: OrderLineDraft[] = [];
 
@@ -56,16 +53,31 @@ export function buildOrderLineDrafts(
     const product = productById.get(item.productId);
 
     if (!product) {
+      if (requireEveryProduct) {
+        throw new Error("One or more selected products are no longer available.");
+      }
       continue;
     }
 
-    const lineTotal = Number((product.price * item.quantity).toFixed(2));
+    if (requireEveryProduct && item.quantity > product.stockQuantity) {
+      throw new Error(`Insufficient stock for ${product.name}.`);
+    }
+
+    const quantity = requireEveryProduct
+      ? item.quantity
+      : Math.min(item.quantity, product.stockQuantity);
+
+    if (quantity <= 0) {
+      continue;
+    }
+
+    const lineTotal = Number((product.price * quantity).toFixed(2));
 
     orderLines.push({
       productId: product.id,
       productNameSnapshot: product.name,
       unitPrice: product.price,
-      quantity: item.quantity,
+      quantity,
       lineTotal,
     });
   }

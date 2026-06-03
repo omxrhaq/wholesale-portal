@@ -232,6 +232,8 @@ export async function createProduct(
         description: input.description || null,
         unit: input.unit,
         price: input.price,
+        stockQuantity: input.stockQuantity,
+        lowStockThreshold: input.lowStockThreshold,
         isActive: input.isActive,
       })
       .returning();
@@ -251,6 +253,8 @@ export async function createProduct(
           { field: "description", before: null, after: product.description ?? null },
           { field: "unit", before: null, after: product.unit },
           { field: "price", before: null, after: product.price },
+          { field: "stockQuantity", before: null, after: product.stockQuantity },
+          { field: "lowStockThreshold", before: null, after: product.lowStockThreshold },
           { field: "isActive", before: null, after: product.isActive },
         ],
       },
@@ -288,6 +292,8 @@ export async function updateProduct(
         description: input.description || null,
         unit: input.unit,
         price: input.price,
+        stockQuantity: input.stockQuantity,
+        lowStockThreshold: input.lowStockThreshold,
         isActive: input.isActive,
         updatedAt: new Date(),
       })
@@ -310,6 +316,8 @@ export async function updateProduct(
             description: currentProduct.description ?? null,
             unit: currentProduct.unit,
             price: currentProduct.price,
+            stockQuantity: currentProduct.stockQuantity,
+            lowStockThreshold: currentProduct.lowStockThreshold,
             isActive: currentProduct.isActive,
           },
           {
@@ -319,6 +327,8 @@ export async function updateProduct(
             description: product.description ?? null,
             unit: product.unit,
             price: product.price,
+            stockQuantity: product.stockQuantity,
+            lowStockThreshold: product.lowStockThreshold,
             isActive: product.isActive,
           },
           [
@@ -328,6 +338,8 @@ export async function updateProduct(
             { key: "description" },
             { key: "unit" },
             { key: "price" },
+            { key: "stockQuantity" },
+            { key: "lowStockThreshold" },
             { key: "isActive" },
           ],
         ),
@@ -412,6 +424,8 @@ const productWithCategorySelect = {
   description: products.description,
   unit: products.unit,
   price: products.price,
+  stockQuantity: products.stockQuantity,
+  lowStockThreshold: products.lowStockThreshold,
   isActive: products.isActive,
   createdAt: products.createdAt,
   updatedAt: products.updatedAt,

@@ -1,7 +1,7 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import type { CompanyContext } from "@/lib/companies/context";
-import { db } from "@/lib/db";
+import { db, type DbExecutor } from "@/lib/db";
 import { customers, orderItems, orders, products } from "@/lib/db/schema";
 import {
   buildOrderLineDrafts,
@@ -19,16 +19,19 @@ export async function createPortalOrder(
   input: PortalOrderInput,
 ) {
   const customer = await getActivePortalCustomer(context.company.id, portalUserId);
-  const orderLines = await buildActiveOrderLines(
-    context.company.id,
-    normalizeProductQuantities(input.items),
-    {
-      requireEveryProduct: true,
-    },
-  );
-
-  const totalAmount = calculateOrderTotal(orderLines);
   const createdOrder = await db.transaction(async (tx) => {
+    const orderLines = await buildActiveOrderLines(
+      context.company.id,
+      normalizeProductQuantities(input.items),
+      {
+        requireEveryProduct: true,
+        executor: tx,
+      },
+    );
+    const totalAmount = calculateOrderTotal(orderLines);
+
+    await decrementStockForOrderLines(tx, context.company.id, orderLines);
+
     const [newOrder] = await tx
       .insert(orders)
       .values({
@@ -37,6 +40,7 @@ export async function createPortalOrder(
         status: "new",
         totalAmount,
         notes: input.notes?.trim() ? input.notes.trim() : null,
+        inventoryReserved: true,
       })
       .returning({ id: orders.id });
 
@@ -158,8 +162,10 @@ async function buildActiveOrderLines(
   requestedItems: OrderProductQuantity[],
   {
     requireEveryProduct,
+    executor = db,
   }: {
     requireEveryProduct: boolean;
+    executor?: DbExecutor;
   },
 ): Promise<OrderLineDraft[]> {
   const requestedProductIds = requestedItems.map((item) => item.productId);
@@ -168,11 +174,12 @@ async function buildActiveOrderLines(
     return [];
   }
 
-  const selectedProducts = await db
+  const selectedProducts = await executor
     .select({
       id: products.id,
       name: products.name,
       price: products.price,
+      stockQuantity: products.stockQuantity,
     })
     .from(products)
     .where(
@@ -186,4 +193,31 @@ async function buildActiveOrderLines(
   return buildOrderLineDrafts(requestedItems, selectedProducts, {
     requireEveryProduct,
   });
+}
+
+async function decrementStockForOrderLines(
+  executor: DbExecutor,
+  companyId: string,
+  lines: OrderLineDraft[],
+) {
+  for (const line of lines) {
+    const [updatedProduct] = await executor
+      .update(products)
+      .set({
+        stockQuantity: sql`${products.stockQuantity} - ${line.quantity}`,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(products.id, line.productId),
+          eq(products.companyId, companyId),
+          sql`${products.stockQuantity} >= ${line.quantity}`,
+        ),
+      )
+      .returning({ id: products.id });
+
+    if (!updatedProduct) {
+      throw new Error(`Insufficient stock for ${line.productNameSnapshot}.`);
+    }
+  }
 }

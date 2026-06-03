@@ -29,6 +29,8 @@ type ProductFormProps = {
     manageCategories: string;
     unit: string;
     price: string;
+    stock: string;
+    lowStockThreshold: string;
     description: string;
     activeHelp: string;
     saveProduct: string;
@@ -46,6 +48,8 @@ const defaultValues: ProductInput = {
   description: "",
   unit: "piece",
   price: 0,
+  stockQuantity: 0,
+  lowStockThreshold: 0,
   isActive: true,
 };
 
@@ -154,6 +158,30 @@ export function ProductForm({
                 {...form.register("price", { valueAsNumber: true })}
               />
               <FieldError message={form.formState.errors.price?.message} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="stockQuantity">{copy.stock}</Label>
+              <Input
+                id="stockQuantity"
+                type="number"
+                step="1"
+                min="0"
+                {...form.register("stockQuantity", { valueAsNumber: true })}
+              />
+              <FieldError message={form.formState.errors.stockQuantity?.message} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lowStockThreshold">{copy.lowStockThreshold}</Label>
+              <Input
+                id="lowStockThreshold"
+                type="number"
+                step="1"
+                min="0"
+                {...form.register("lowStockThreshold", { valueAsNumber: true })}
+              />
+              <FieldError message={form.formState.errors.lowStockThreshold?.message} />
             </div>
           </div>
 

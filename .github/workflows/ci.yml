@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, unit, and docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Check generated docs
+        run: npm run docs:check
+
+      - name: Check whitespace errors
+        run: git diff --check
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+  regression:
+    name: Full regression guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run full regression suite
+        run: npm run test:regression:full
+
+  database:
+    name: Database migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap Supabase-compatible auth stubs
+        run: |
+          node --input-type=module -e "
+            import postgres from 'postgres';
+
+            const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+
+            await sql.unsafe('create schema if not exists auth');
+            await sql.unsafe('create extension if not exists pgcrypto');
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if; end \\\$\\\$\");
+            await sql.unsafe('create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text, created_at timestamptz default now())');
+            await sql.unsafe('create or replace function auth.uid() returns uuid language sql stable as \\\$\\\$ select null::uuid \\\$\\\$');
+
+            await sql.end();
+          "
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Assert inventory migration columns
+        run: |
+          node --input-type=module -e "
+            import postgres from 'postgres';
+
+            const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+            const rows = await sql.unsafe(\`
+              select table_name, column_name
+              from information_schema.columns
+              where table_schema = 'public'
+                and (
+                  (table_name = 'products' and column_name in ('stock_quantity', 'low_stock_threshold'))
+                  or (table_name = 'orders' and column_name = 'inventory_reserved')
+                )
+              order by table_name, column_name
+            \`);
+
+            const columns = new Set(rows.map((row) => row.table_name + '.' + row.column_name));
+            for (const column of ['orders.inventory_reserved', 'products.low_stock_threshold', 'products.stock_quantity']) {
+              if (!columns.has(column)) {
+                throw new Error('Missing migrated column: ' + column);
+              }
+            }
+
+            await sql.end();
+          "

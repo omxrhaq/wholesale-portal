@@ -23,6 +23,8 @@ type ProductSort =
   | "price_desc"
   | "unit_asc"
   | "unit_desc"
+  | "stock_asc"
+  | "stock_desc"
   | "status_asc"
   | "status_desc"
   | "updated_asc"
@@ -139,6 +141,12 @@ export default async function ProductsPage({
                       activeSort={selectedSort}
                     />
                     <SortableHeader
+                      label={t.stock}
+                      params={params}
+                      sortKey="stock"
+                      activeSort={selectedSort}
+                    />
+                    <SortableHeader
                       label={t.status}
                       params={params}
                       sortKey="status"
@@ -170,6 +178,14 @@ export default async function ProductsPage({
                       </td>
                       <td className="px-4 py-4 text-foreground/80">{formatCurrency(product.price, locale)}</td>
                       <td className="px-4 py-4 text-foreground/80">{product.unit}</td>
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-foreground">{product.stockQuantity}</div>
+                        {product.stockQuantity === 0 ? (
+                          <p className="text-xs text-rose-700">{t.outOfStock}</p>
+                        ) : product.stockQuantity <= product.lowStockThreshold ? (
+                          <p className="text-xs text-amber-700">{t.lowStock}</p>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-4">
                         <span
                           className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
@@ -219,7 +235,7 @@ function SortableHeader({
 }: {
   label: string;
   params: { status?: string; sort?: string };
-  sortKey: "name" | "sku" | "category" | "price" | "unit" | "status" | "updated";
+  sortKey: "name" | "sku" | "category" | "price" | "unit" | "stock" | "status" | "updated";
   activeSort: ProductSort;
 }) {
   const isActive = activeSort.startsWith(`${sortKey}_`);
@@ -271,6 +287,8 @@ function isProductSort(value: string | undefined): value is ProductSort {
     "price_desc",
     "unit_asc",
     "unit_desc",
+    "stock_asc",
+    "stock_desc",
     "status_asc",
     "status_desc",
     "updated_asc",
@@ -279,7 +297,7 @@ function isProductSort(value: string | undefined): value is ProductSort {
 }
 
 function getNextSort(
-  sortKey: "name" | "sku" | "category" | "price" | "unit" | "status" | "updated",
+  sortKey: "name" | "sku" | "category" | "price" | "unit" | "stock" | "status" | "updated",
   activeSort: ProductSort,
 ) {
   const desc = `${sortKey}_desc` as ProductSort;
@@ -298,6 +316,8 @@ function sortProducts<T extends {
   categoryName: string | null;
   price: number;
   unit: string;
+  stockQuantity: number;
+  lowStockThreshold: number;
   isActive: boolean;
   updatedAt: Date;
 }>(items: T[], sort: ProductSort) {
@@ -325,6 +345,10 @@ function sortProducts<T extends {
         return a.unit.localeCompare(b.unit, "en-US");
       case "unit_desc":
         return b.unit.localeCompare(a.unit, "en-US");
+      case "stock_asc":
+        return a.stockQuantity - b.stockQuantity;
+      case "stock_desc":
+        return b.stockQuantity - a.stockQuantity;
       case "status_asc":
         return Number(a.isActive) - Number(b.isActive);
       case "status_desc":

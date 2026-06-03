@@ -1,12 +1,13 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
-import { db } from "@/lib/db";
+import { db, type DbExecutor } from "@/lib/db";
 import {
   activityLogs,
   customers,
   orderItems,
   orders,
   profiles,
+  products,
   type OrderStatus,
 } from "@/lib/db/schema";
 import type { CompanyContext } from "@/lib/companies/context";
@@ -331,6 +332,7 @@ export async function updateOrderStatus(
     .select({
       id: orders.id,
       status: orders.status,
+      inventoryReserved: orders.inventoryReserved,
     })
     .from(orders)
     .where(and(eq(orders.id, orderId), eq(orders.companyId, context.company.id)))
@@ -355,6 +357,8 @@ export async function updateOrderStatus(
       .update(orders)
       .set({
         status: nextStatus,
+        inventoryReserved:
+          nextStatus === "cancelled" ? false : currentOrder.inventoryReserved,
         updatedAt: new Date(),
       })
       .where(
@@ -371,6 +375,10 @@ export async function updateOrderStatus(
 
     if (!updatedOrder) {
       throw new Error("Order status changed before this update. Refresh and try again.");
+    }
+
+    if (nextStatus === "cancelled" && currentOrder.inventoryReserved) {
+      await restoreStockForOrder(tx, context.company.id, orderId);
     }
 
     await logActivityTx(tx, {
@@ -404,6 +412,7 @@ export async function updateOrderDraft(
       id: orders.id,
       status: orders.status,
       notes: orders.notes,
+      inventoryReserved: orders.inventoryReserved,
     })
     .from(orders)
     .where(and(eq(orders.id, orderId), eq(orders.companyId, context.company.id)))
@@ -470,6 +479,10 @@ export async function updateOrderDraft(
     .map((item) => item.id);
 
   await db.transaction(async (tx) => {
+    if (currentOrder.inventoryReserved) {
+      await applyStockDeltaForDraftEdit(tx, context.company.id, existingItems, nextItems);
+    }
+
     const [updatedOrder] = await tx
       .update(orders)
       .set({
@@ -580,6 +593,84 @@ export async function updateOrderDraft(
     totalAmount,
     notes: nextNotes,
   };
+}
+
+async function restoreStockForOrder(
+  executor: DbExecutor,
+  companyId: string,
+  orderId: string,
+) {
+  const items = await executor
+    .select({
+      productId: orderItems.productId,
+      quantity: orderItems.quantity,
+    })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
+
+  for (const item of items) {
+    await executor
+      .update(products)
+      .set({
+        stockQuantity: sql`${products.stockQuantity} + ${item.quantity}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(products.id, item.productId), eq(products.companyId, companyId)));
+  }
+}
+
+async function applyStockDeltaForDraftEdit(
+  executor: DbExecutor,
+  companyId: string,
+  existingItems: Array<{
+    id: string;
+    productId: string;
+    productNameSnapshot: string;
+    quantity: number;
+  }>,
+  nextItems: Array<{
+    id: string;
+    productId: string;
+    productNameSnapshot: string;
+    quantity: number;
+  }>,
+) {
+  for (const item of existingItems) {
+    const nextItem = nextItems.find((entry) => entry.id === item.id);
+    const nextQuantity = nextItem?.quantity ?? 0;
+    const delta = nextQuantity - item.quantity;
+
+    if (delta > 0) {
+      const [updatedProduct] = await executor
+        .update(products)
+        .set({
+          stockQuantity: sql`${products.stockQuantity} - ${delta}`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(products.id, item.productId),
+            eq(products.companyId, companyId),
+            sql`${products.stockQuantity} >= ${delta}`,
+          ),
+        )
+        .returning({ id: products.id });
+
+      if (!updatedProduct) {
+        throw new Error(`Insufficient stock for ${item.productNameSnapshot}.`);
+      }
+    }
+
+    if (delta < 0) {
+      await executor
+        .update(products)
+        .set({
+          stockQuantity: sql`${products.stockQuantity} + ${Math.abs(delta)}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(products.id, item.productId), eq(products.companyId, companyId)));
+    }
+  }
 }
 
 function buildOrderItemCaseValue<TValue extends number>(

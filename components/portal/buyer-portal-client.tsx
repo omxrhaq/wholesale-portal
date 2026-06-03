@@ -71,6 +71,7 @@ type BuyerPortalClientProps = {
     description: string | null;
     unit: string;
     price: number;
+    stockQuantity: number;
   }>;
   customer: {
     id: string;
@@ -116,6 +117,26 @@ export function BuyerPortalClient({
   const [isPending, startTransition] = useTransition();
   const deferredSearch = useDeferredValue(search);
 
+  const productStock = useMemo(
+    () => new Map(products.map((product) => [product.id, product.stockQuantity])),
+    [products],
+  );
+
+  const sanitizedQuantities = useMemo(() => {
+    const next: Record<string, number> = {};
+
+    for (const [productId, quantity] of Object.entries(quantities)) {
+      const stockQuantity = productStock.get(productId) ?? 0;
+      const cappedQuantity = Math.min(quantity, stockQuantity);
+
+      if (cappedQuantity > 0) {
+        next[productId] = cappedQuantity;
+      }
+    }
+
+    return next;
+  }, [productStock, quantities]);
+
   const categories = useMemo(() => {
     return Array.from(
       new Set(
@@ -143,10 +164,10 @@ export function BuyerPortalClient({
     return products
       .map((product) => ({
         ...product,
-        quantity: quantities[product.id] ?? 0,
+        quantity: sanitizedQuantities[product.id] ?? 0,
       }))
       .filter((item) => item.quantity > 0);
-  }, [products, quantities]);
+  }, [products, sanitizedQuantities]);
 
   const total = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -156,24 +177,27 @@ export function BuyerPortalClient({
     localStorage.setItem(
       storageKey,
       JSON.stringify({
-        quantities,
+        quantities: sanitizedQuantities,
         notes,
       }),
     );
-  }, [notes, quantities, storageKey]);
+  }, [notes, sanitizedQuantities, storageKey]);
 
   function resetCatalogFilters() {
     setSearch("");
     setSelectedCategory("all");
   }
 
-  function updateQuantity(productId: string, rawValue: string) {
+  function updateQuantity(
+    product: BuyerPortalClientProps["products"][number],
+    rawValue: string,
+  ) {
     setQuantities((current) => {
       const trimmed = rawValue.trim();
 
       if (trimmed === "") {
         const next = { ...current };
-        delete next[productId];
+        delete next[product.id];
         return next;
       }
 
@@ -183,15 +207,16 @@ export function BuyerPortalClient({
       }
 
       const normalized = Math.max(0, Math.floor(parsed));
-      if (normalized <= 0) {
+      const cappedQuantity = Math.min(normalized, product.stockQuantity);
+      if (cappedQuantity <= 0) {
         const next = { ...current };
-        delete next[productId];
+        delete next[product.id];
         return next;
       }
 
       return {
         ...current,
-        [productId]: normalized,
+        [product.id]: cappedQuantity,
       };
     });
   }
@@ -332,6 +357,7 @@ export function BuyerPortalClient({
                     <th className="px-4 py-3 font-medium">{copy.category}</th>
                     <th className="px-4 py-3 font-medium">{copy.price}</th>
                     <th className="px-4 py-3 font-medium">{copy.unit}</th>
+                    <th className="px-4 py-3 font-medium">{copy.stock}</th>
                     <th className="px-4 py-3 font-medium">{copy.quantity}</th>
                   </tr>
                 </thead>
@@ -348,15 +374,26 @@ export function BuyerPortalClient({
                         {formatCurrency(product.price, locale)}
                       </td>
                       <td className="px-4 py-4 text-foreground/80">{product.unit}</td>
+                      <td className="px-4 py-4 text-foreground/80">
+                        {product.stockQuantity > 0
+                          ? product.stockQuantity
+                          : copy.outOfStock}
+                      </td>
                       <td className="px-4 py-4">
                         <input
                           type="number"
                           min={0}
+                          max={product.stockQuantity}
                           step={1}
-                          value={quantities[product.id]?.toString() ?? ""}
-                          onChange={(event) =>
-                            updateQuantity(product.id, event.target.value)
+                          value={
+                            sanitizedQuantities[product.id]
+                              ? sanitizedQuantities[product.id].toString()
+                              : ""
                           }
+                          onChange={(event) =>
+                            updateQuantity(product, event.target.value)
+                          }
+                          disabled={product.stockQuantity <= 0}
                           placeholder="0"
                           className="h-10 w-24 rounded-md border border-border px-3 py-2"
                         />
