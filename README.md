@@ -114,6 +114,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 - `0010_orange_titania.sql`
 - `0011_closed_mercury.sql`
 - `0012_scrub_admin_audit_metadata.sql`
+- `0013_supreme_guardian.sql`
 
 ## Environment
 

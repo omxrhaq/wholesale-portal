@@ -11,11 +11,13 @@ const products = [
     id: "product-a",
     name: "Coffee Beans",
     price: 12.5,
+    stockQuantity: 10,
   },
   {
     id: "product-b",
     name: "Tea Box",
     price: 4.25,
+    stockQuantity: 5,
   },
 ];
 
@@ -52,6 +54,16 @@ describe("order intake", () => {
     ).toThrow("One or more selected products are no longer available.");
   });
 
+  it("rejects checkout when requested quantity exceeds stock", () => {
+    expect(() =>
+      buildOrderLineDrafts(
+        [{ productId: "product-a", quantity: 11 }],
+        products,
+        { requireEveryProduct: true },
+      ),
+    ).toThrow("Insufficient stock for Coffee Beans.");
+  });
+
   it("skips unavailable products for reorder drafts", () => {
     expect(
       buildOrderLineDrafts(
@@ -69,6 +81,24 @@ describe("order intake", () => {
         unitPrice: 12.5,
         quantity: 2,
         lineTotal: 25,
+      },
+    ]);
+  });
+
+  it("caps reorder draft quantities to current stock", () => {
+    expect(
+      buildOrderLineDrafts(
+        [{ productId: "product-b", quantity: 8 }],
+        [products[1]],
+        { requireEveryProduct: false },
+      ),
+    ).toEqual([
+      {
+        productId: "product-b",
+        productNameSnapshot: "Tea Box",
+        unitPrice: 4.25,
+        quantity: 5,
+        lineTotal: 21.25,
       },
     ]);
   });

@@ -241,6 +241,8 @@ export const products = pgTable(
     description: text("description"),
     unit: varchar("unit", { length: 50 }).notNull(),
     price: numeric("price", { precision: 12, scale: 2, mode: "number" }).notNull(),
+    stockQuantity: integer("stock_quantity").default(0).notNull(),
+    lowStockThreshold: integer("low_stock_threshold").default(0).notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
@@ -252,6 +254,7 @@ export const products = pgTable(
   (table) => [
     uniqueIndex("products_company_sku_idx").on(table.companyId, table.sku),
     index("products_company_active_idx").on(table.companyId, table.isActive),
+    index("products_company_stock_idx").on(table.companyId, table.stockQuantity),
     index("products_company_updated_idx").on(table.companyId, table.updatedAt, table.id),
     pgPolicy("products_select_company_members", {
       for: "select",
@@ -297,6 +300,7 @@ export const orders = pgTable(
       mode: "number",
     }).notNull(),
     notes: text("notes"),
+    inventoryReserved: boolean("inventory_reserved").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

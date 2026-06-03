@@ -10,6 +10,8 @@ export const importedProductRowSchema = z.object({
   description: z.string().trim().optional(),
   unit: z.string().trim().min(1, "Unit is required."),
   price: z.number().positive("Price must be greater than 0."),
+  stockQuantity: z.number().int().min(0).default(0),
+  lowStockThreshold: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
 });
 

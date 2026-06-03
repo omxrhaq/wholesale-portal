@@ -13,6 +13,14 @@ export const productSchema = z.object({
   description: z.string().trim().max(2000, "Description is too long.").optional(),
   unit: z.string().trim().min(1, "Unit is required.").max(50),
   price: z.number().positive("Price must be greater than 0."),
+  stockQuantity: z
+    .number()
+    .int("Stock must be a whole number.")
+    .min(0, "Stock cannot be negative."),
+  lowStockThreshold: z
+    .number()
+    .int("Low stock threshold must be a whole number.")
+    .min(0, "Low stock threshold cannot be negative."),
   isActive: z.boolean(),
 });
 

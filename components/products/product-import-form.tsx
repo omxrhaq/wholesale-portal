@@ -23,6 +23,8 @@ type HeaderMapping = {
   description: string;
   unit: string;
   price: string;
+  stockQuantity: string;
+  lowStockThreshold: string;
   isActive: string;
 };
 
@@ -52,6 +54,10 @@ type PreviewSort =
   | "unit_desc"
   | "price_asc"
   | "price_desc"
+  | "stock_asc"
+  | "stock_desc"
+  | "low_stock_asc"
+  | "low_stock_desc"
   | "active_asc"
   | "active_desc";
 
@@ -62,6 +68,8 @@ const fieldOptions = [
   { key: "description", required: false },
   { key: "unit", required: true },
   { key: "price", required: true },
+  { key: "stockQuantity", required: false },
+  { key: "lowStockThreshold", required: false },
   { key: "isActive", required: false },
 ] as const;
 
@@ -72,6 +80,8 @@ const headerAliases: Record<keyof HeaderMapping, string[]> = {
   description: ["description", "beschrijving", "omschrijving"],
   unit: ["unit", "eenheid", "uom"],
   price: ["price", "prijs", "unit price", "verkoopprijs"],
+  stockQuantity: ["stock", "voorraad", "stock quantity", "voorraad aantal"],
+  lowStockThreshold: ["low stock threshold", "lage voorraadgrens", "minimum stock"],
   isActive: ["active", "actief", "status", "is active"],
 };
 
@@ -79,7 +89,14 @@ type ProductImportFormProps = {
   copy: ReturnType<typeof getProductImportCopy> &
     Pick<
       ReturnType<typeof getProductCopy>,
-      "name" | "sku" | "category" | "description" | "unit" | "price"
+      | "name"
+      | "sku"
+      | "category"
+      | "description"
+      | "unit"
+      | "price"
+      | "stock"
+      | "lowStockThreshold"
     >;
 };
 
@@ -333,6 +350,18 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
                           onSortChange={setPreviewSort}
                         />
                         <PreviewHeader
+                          label={copy.stock}
+                          sortKey="stock"
+                          activeSort={previewSort}
+                          onSortChange={setPreviewSort}
+                        />
+                        <PreviewHeader
+                          label={copy.lowStockThreshold}
+                          sortKey="low_stock"
+                          activeSort={previewSort}
+                          onSortChange={setPreviewSort}
+                        />
+                        <PreviewHeader
                           label={copy.active}
                           sortKey="active"
                           activeSort={previewSort}
@@ -349,6 +378,8 @@ export function ProductImportForm({ copy }: ProductImportFormProps) {
                           <td className="px-4 py-3">{row.categoryName}</td>
                           <td className="px-4 py-3">{row.unit}</td>
                           <td className="px-4 py-3">{row.price}</td>
+                          <td className="px-4 py-3">{row.stockQuantity}</td>
+                          <td className="px-4 py-3">{row.lowStockThreshold}</td>
                           <td className="px-4 py-3">
                             {row.isActive ? copy.yes : copy.no}
                           </td>
@@ -414,7 +445,16 @@ function PreviewHeader({
   onSortChange,
 }: {
   label: string;
-  sortKey: "row" | "name" | "sku" | "category" | "unit" | "price" | "active";
+  sortKey:
+    | "row"
+    | "name"
+    | "sku"
+    | "category"
+    | "unit"
+    | "price"
+    | "stock"
+    | "low_stock"
+    | "active";
   activeSort: PreviewSort;
   onSortChange: (value: PreviewSort) => void;
 }) {
@@ -447,6 +487,8 @@ function getFieldLabel(
     description: copy.description,
     unit: copy.unit,
     price: copy.price,
+    stockQuantity: copy.stock,
+    lowStockThreshold: copy.lowStockThreshold,
     isActive: copy.active,
   };
 
@@ -461,7 +503,16 @@ function formatTemplate(template: string, values: Record<string, string>) {
 }
 
 function getNextPreviewSort(
-  sortKey: "row" | "name" | "sku" | "category" | "unit" | "price" | "active",
+  sortKey:
+    | "row"
+    | "name"
+    | "sku"
+    | "category"
+    | "unit"
+    | "price"
+    | "stock"
+    | "low_stock"
+    | "active",
   activeSort: PreviewSort,
 ) {
   const desc = `${sortKey}_desc` as PreviewSort;
@@ -503,6 +554,14 @@ function sortPreviewRows(rows: ImportedProductRowInput[], sort: PreviewSort) {
         return a.price - b.price;
       case "price_desc":
         return b.price - a.price;
+      case "stock_asc":
+        return a.stockQuantity - b.stockQuantity;
+      case "stock_desc":
+        return b.stockQuantity - a.stockQuantity;
+      case "low_stock_asc":
+        return a.lowStockThreshold - b.lowStockThreshold;
+      case "low_stock_desc":
+        return b.lowStockThreshold - a.lowStockThreshold;
       case "active_asc":
         return Number(a.isActive) - Number(b.isActive);
       case "active_desc":
@@ -532,6 +591,8 @@ function getDefaultMapping(headers: string[]): HeaderMapping {
     description: findMatchingHeader(headers, headerAliases.description),
     unit: findMatchingHeader(headers, headerAliases.unit),
     price: findMatchingHeader(headers, headerAliases.price),
+    stockQuantity: findMatchingHeader(headers, headerAliases.stockQuantity),
+    lowStockThreshold: findMatchingHeader(headers, headerAliases.lowStockThreshold),
     isActive: findMatchingHeader(headers, headerAliases.isActive),
   };
 }
@@ -569,9 +630,15 @@ function buildImportRows(
       description: getValue(mapping.description),
       unit: getValue(mapping.unit),
       price: parseLocalizedNumber(getValue(mapping.price)),
+      stockQuantity: parseWholeNumber(getValue(mapping.stockQuantity)),
+      lowStockThreshold: parseWholeNumber(getValue(mapping.lowStockThreshold)),
       isActive: parseBooleanValue(getValue(mapping.isActive)),
     };
   });
+}
+
+function parseWholeNumber(value: string) {
+  return Math.max(0, Math.floor(parseLocalizedNumber(value)));
 }
 
 function parseLocalizedNumber(value: string) {
