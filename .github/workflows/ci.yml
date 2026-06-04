@@ -121,6 +121,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_SSL: disable
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
       SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
@@ -185,3 +186,6 @@ jobs:
 
             await sql.end();
           "
+
+      - name: Run DB integration tests
+        run: npm run test:integration:db

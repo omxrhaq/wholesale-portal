@@ -20,10 +20,20 @@ function getDatabasePoolMax() {
   return process.env.NODE_ENV === "production" ? 10 : 5;
 }
 
+function getDatabaseSsl() {
+  const value = process.env.DATABASE_SSL?.toLowerCase();
+
+  if (value === "disable" || value === "false") {
+    return false;
+  }
+
+  return "require";
+}
+
 const connection =
   globalThis.__wholesaleSql__ ??
   postgres(getDatabaseUrl(), {
-    ssl: "require",
+    ssl: getDatabaseSsl(),
     max: getDatabasePoolMax(),
     prepare: false,
   });

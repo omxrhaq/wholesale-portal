@@ -147,6 +147,7 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run lint` - `eslint`
 - `npm run prepare` - `node scripts/install-git-hooks.mjs`
 - `npm run start` - `next start`
+- `npm run test:integration:db` - `vitest run tests/integration/order-stock.test.ts`
 - `npm run test:regression` - `node scripts/test-regression.mjs baseline`
 - `npm run test:regression:admin` - `node scripts/test-regression.mjs baseline admin`
 - `npm run test:regression:auth` - `node scripts/test-regression.mjs baseline auth`
@@ -158,7 +159,7 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run test:regression:order` - `node scripts/test-regression.mjs baseline order`
 - `npm run test:regression:products` - `node scripts/test-regression.mjs baseline products`
 - `npm run test:regression:ui` - `node scripts/test-regression.mjs baseline ui`
-- `npm run test:unit` - `vitest run`
+- `npm run test:unit` - `vitest run lib/order-intake.test.ts lib/orders.test.ts`
 
 ## Local Development
 
