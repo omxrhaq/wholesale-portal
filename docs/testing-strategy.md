@@ -2,11 +2,26 @@
 
 This project treats every code change as a regression risk in the product area it touches. The goal is not to run the same small check every time, but to run the smallest set of checks that can reasonably prove the related functionality still works.
 
+The working rule is: every pushed feature, fix, refactor or documentation change must be matched to the product areas it can affect, and GitHub must run the relevant regression checks for those areas before the change is merged. If an affected behavior cannot yet be tested automatically, that gap must become a `[Test Scenario]` issue before the implementation issue is closed.
+
+## GitHub Issue Workflow
+
+New work starts in GitHub, not in loose chat context:
+
+- Use or create one `[Epic]` for the larger product area.
+- Create one `[Issue]` for the concrete implementation change.
+- Create one or more `[Test Scenario]` issues for critical behavior and missing automated coverage.
+- Link each PR to the implementation issue and the related test-scenario issue.
+- Close the implementation issue only after GitHub CI passes and the PR is merged.
+
+This keeps the backlog, regression intent and implementation history connected.
+
 ## Definition of Done
 
 Every change must finish with:
 
 - A touched-area assessment: which product areas can be affected.
+- A linked GitHub issue, and for risky behavior a linked `[Test Scenario]` issue.
 - Baseline regression checks:
   - `npm run lint`
   - `npm run build`
@@ -17,7 +32,7 @@ Every change must finish with:
   - checks that could not run
   - residual risk
 
-If a change affects more than one area, run the union of the relevant checks.
+If a change affects more than one area, run the union of the relevant checks. A PR should not merge with only a generic green build when the changed product area has a more specific regression entry below.
 
 ## Regression Matrix
 
