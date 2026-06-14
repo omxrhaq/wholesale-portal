@@ -58,13 +58,37 @@ If the answer is "not applicable", state why. Do not leave a blank answer.
 ### Rate Limiting
 
 - Add rate-limit tests when adding login, password reset, invite/setup link generation, import, checkout or AI endpoints.
-- Until runtime rate limiting exists, track missing runtime controls as security test scenarios.
+- The current runtime helper is in-memory for development/test or explicit `RATE_LIMIT_BACKEND=memory`.
+- Production remains a no-op until a distributed backend is added. Do not claim production-grade abuse protection until Redis/Upstash or an equivalent shared backend is wired in.
 
 ### AI Access
 
 - No AI feature may receive customer, order, tenant, auth, audit or import data without an explicit access model.
 - Prompts, retrieval filters and tool calls must be tenant-scoped.
 - AI output that can affect business state must pass authorization and validation before persistence.
+
+## Environment Variable Exposure
+
+Allowed public variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Never expose these through `NEXT_PUBLIC_` variables:
+
+- service role keys
+- database URLs
+- JWT or auth secrets
+- private API keys
+- webhook signing secrets
+- OpenAI or other model provider keys
+
+Server-only variables:
+
+- `DATABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- future webhook signing secrets
+- future AI provider API keys
 
 ## Vulnerability Regression Rule
 

@@ -106,12 +106,14 @@ jobs:
         run: npm ci
 
       - name: Run security test suite with coverage threshold
-        run: npm run test:security:coverage
+        run: npm run test:security:ci
 
-      - name: Upload security coverage summary
+      - name: Upload security reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-coverage
-          path: coverage/coverage-summary.json
+          name: security-reports
+          path: |
+            reports/security-tests.xml
+            coverage/coverage-summary.json
           if-no-files-found: ignore

@@ -3,10 +3,48 @@ title = "Wholesale Portal secret scanning"
 [extend]
 useDefault = true
 
+[[rules]]
+id = "supabase-service-role-key"
+description = "Supabase service role JWT-like secret"
+regex = '''(?i)(supabase[_-]?(service[_-]?role|secret)|service[_-]?role[_-]?key)\s*[:=]\s*['"]?eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}'''
+keywords = ["supabase", "service_role", "service-role"]
+
+[[rules]]
+id = "jwt-secret-assignment"
+description = "JWT secret assignment"
+regex = '''(?i)(jwt[_-]?secret|nextauth[_-]?secret|auth[_-]?secret)\s*[:=]\s*['"][A-Za-z0-9_./+=-]{24,}['"]'''
+keywords = ["jwt", "secret", "nextauth"]
+
+[[rules]]
+id = "database-url-with-credentials"
+description = "Database URL containing credentials"
+regex = '''(?i)(postgres|postgresql|mysql|mariadb)://[^:\s'"]+:[^@\s'"]+@[^/\s'"]+'''
+keywords = ["postgres", "postgresql", "mysql", "database_url"]
+
+[[rules]]
+id = "openai-or-api-style-key"
+description = "OpenAI or common API-style secret key"
+regex = '''(?i)(openai[_-]?api[_-]?key|api[_-]?key|secret[_-]?key)\s*[:=]\s*['"]?(sk-[A-Za-z0-9_-]{20,}|[A-Za-z0-9_-]{32,})['"]?'''
+keywords = ["openai", "api_key", "secret_key", "sk-"]
+
+[[rules]]
+id = "private-key-block"
+description = "Private key block"
+regex = '''-----BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----'''
+keywords = ["PRIVATE KEY"]
+
+[[rules]]
+id = "public-env-secret-name"
+description = "Private-looking value exposed through NEXT_PUBLIC"
+regex = '''(?i)NEXT_PUBLIC_[A-Z0-9_]*(SECRET|TOKEN|PRIVATE|SERVICE_ROLE|PASSWORD|JWT|KEY)[A-Z0-9_]*\s*='''
+keywords = ["NEXT_PUBLIC_", "SECRET", "TOKEN", "SERVICE_ROLE"]
+
 [allowlist]
 description = "Allow documented CI placeholders and public examples."
 regexes = [
   '''ci-placeholder''',
   '''https://example\.supabase\.co''',
   '''postgresql://postgres:postgres@localhost:5432/postgres''',
+  '''DATABASE_URL="postgresql://\.\.\."''',
+  '''SUPABASE_SERVICE_ROLE_KEY="\.\.\."''',
 ]

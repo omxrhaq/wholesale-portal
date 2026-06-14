@@ -7,6 +7,7 @@ import { clearActiveCompanyId, setActiveCompanyId } from "@/lib/companies/contex
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { companies, companyUsers } from "@/lib/db/schema";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import { getActivePortalCustomer } from "@/lib/services/portal-access-service";
 import { loginSchema } from "@/lib/validation/auth";
 
@@ -35,6 +36,20 @@ export async function portalLoginAction(
   if (!parsed.success) {
     return {
       error: parsed.error.issues[0]?.message ?? "Please check your input.",
+    };
+  }
+
+  try {
+    assertRateLimit({
+      bucket: "auth.portal-login",
+      key: parsed.data.email.toLowerCase(),
+      limit: 5,
+      windowMs: 60_000,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Too many sign-in attempts.",
     };
   }
 

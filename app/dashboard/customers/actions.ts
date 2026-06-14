@@ -9,6 +9,7 @@ import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
 import { companyUsers, customers, profiles } from "@/lib/db/schema";
 import { hasSupabaseServiceRoleKey } from "@/lib/env";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import {
   createCustomer,
   getCustomerById,
@@ -129,6 +130,13 @@ export async function setupCustomerPortalLoginAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
+
     const parsed = customerPortalLoginSchema.parse(values);
     const customer = await getCustomerById(context.company.id, customerId);
 
@@ -230,6 +238,12 @@ export async function sendCustomerPortalSetupEmailAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
 
     if (!hasSupabaseServiceRoleKey()) {
       return {
@@ -264,6 +278,12 @@ export async function generateCustomerPortalSetupLinkAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
 
     if (!hasSupabaseServiceRoleKey()) {
       return {

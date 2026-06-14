@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getAuthUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { profiles, superAdmins } from "@/lib/db/schema";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 
 export type SuperAdminContext = {
   userId: string;
@@ -64,6 +65,13 @@ export async function requireSuperAdmin() {
   if (!user) {
     redirect("/login?next=/admin");
   }
+
+  assertRateLimit({
+    bucket: "admin.access",
+    key: user.id,
+    limit: 60,
+    windowMs: 60_000,
+  });
 
   const context = await fetchSuperAdminContext(user.id);
 

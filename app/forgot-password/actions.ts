@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPasswordCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import { passwordResetRequestSchema } from "@/lib/validation/auth";
 
 type ForgotPasswordState = {
@@ -26,6 +27,20 @@ export async function requestPasswordResetAction(
   if (!parsed.success) {
     return {
       error: parsed.error.issues[0]?.message ?? "Please check your input.",
+    };
+  }
+
+  try {
+    assertRateLimit({
+      bucket: "auth.password-reset",
+      key: parsed.data.email.toLowerCase(),
+      limit: 3,
+      windowMs: 60_000,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Too many password reset attempts.",
     };
   }
 

@@ -14,6 +14,8 @@ The security workflow must fail when:
 
 The current workflow is `.github/workflows/security.yml`.
 
+Branch protection must mark the CI and Security jobs as required. See `docs/branch-protection.md`; this cannot be fully enforced from repository files alone.
+
 ## Security Test Layout
 
 Security tests live under `tests/security/`:
@@ -32,7 +34,9 @@ Each category starts with baseline static tests. As the app grows, add service, 
 
 ## Coverage Threshold
 
-`npm run test:security:coverage` runs the security test suite with Vitest coverage enabled. The initial coverage threshold applies to the shared security policy module that defines required categories, PR questions and regression rules. This makes the gate fail when the security framework is changed without matching tests.
+`npm run test:security:coverage` runs the security test suite with Vitest coverage enabled. `npm run test:security:ci` also writes JUnit output to `reports/security-tests.xml` for GitHub artifacts.
+
+The initial coverage threshold applies to the shared security policy module and the rate-limit helper. This makes the gate fail when the security framework is changed without matching tests.
 
 As more runtime security tests are added, expand coverage include patterns and thresholds to cover the security-critical services directly.
 
@@ -42,6 +46,36 @@ As more runtime security tests are added, expand coverage include patterns and t
 - `npm run security:audit` fails on critical vulnerabilities through `npm audit --audit-level=critical`.
 - Gitleaks runs in GitHub Actions with `.gitleaks.toml`.
 - CodeQL runs JavaScript/TypeScript analysis with security and quality queries.
+
+Project-specific Gitleaks rules cover Supabase service role keys, JWT/auth secrets, database URLs with credentials, private key blocks, API-style keys and suspicious `NEXT_PUBLIC_` secret names. Documented CI placeholders are allowlisted.
+
+## Security Headers
+
+Security headers are configured in `next.config.ts`:
+
+- `Content-Security-Policy`
+- `X-Frame-Options`
+- `X-Content-Type-Options`
+- `Referrer-Policy`
+- `Permissions-Policy`
+- `Strict-Transport-Security` in production builds only
+
+The CSP is intentionally compatible with the current Next.js app and should be tightened when nonce-based rendering is introduced.
+
+## Rate Limiting
+
+Sensitive flows are identified as rate-limit buckets:
+
+- login
+- portal login
+- password reset
+- customer portal setup links
+- product import
+- checkout
+- reorder
+- admin access
+
+The current helper provides in-memory throttling for development/test or explicit `RATE_LIMIT_BACKEND=memory`. Production defaults to no-op because in-memory counters are not reliable in serverless or multi-instance deployments. Add a distributed backend before claiming production-grade rate limiting.
 
 ## Permanent Regression Rule
 

@@ -13,7 +13,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json-summary"],
-      include: ["tests/security/security-policy.ts"],
+      include: [
+        "tests/security/security-policy.ts",
+        "lib/security/rate-limit.ts",
+      ],
       thresholds: {
         statements: 90,
         branches: 80,
