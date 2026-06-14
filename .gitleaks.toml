@@ -1,0 +1,12 @@
+title = "Wholesale Portal secret scanning"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow documented CI placeholders and public examples."
+regexes = [
+  '''ci-placeholder''',
+  '''https://example\.supabase\.co''',
+  '''postgresql://postgres:postgres@localhost:5432/postgres''',
+]
