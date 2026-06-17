@@ -20,7 +20,7 @@ id = "database-url-with-credentials"
 description = "Database URL containing credentials"
 regex = '''(?i)(postgres|postgresql|mysql|mariadb)://[^:\s'"]+:[^@\s'"]+@[^/\s'"]+'''
 keywords = ["postgres", "postgresql", "mysql", "database_url"]
-[rules.allowlist]
+[[rules.allowlists]]
 description = "Allow the exact local CI Postgres URL placeholder only in the security workflow."
 paths = [
   '''^\.github/workflows/security\.yml$''',

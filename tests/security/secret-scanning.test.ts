@@ -21,7 +21,7 @@ describe("project-specific secret scanning", () => {
   it("allowlists only the exact local CI Postgres URL in the security workflow", () => {
     const config = readRepoFile(".gitleaks.toml");
 
-    expect(config).toContain(`[rules.allowlist]`);
+    expect(config).toContain(`[[rules.allowlists]]`);
     expect(config).toContain(`^\\.github/workflows/security\\.yml$`);
     expect(
       config.match(/postgresql:\/\/postgres:postgres@localhost:5432\/postgres/g),
