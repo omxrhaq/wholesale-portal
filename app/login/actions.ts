@@ -7,6 +7,7 @@ import { clearActiveCompanyId, setActiveCompanyId } from "@/lib/companies/contex
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { companies, companyUsers } from "@/lib/db/schema";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import { loginSchema } from "@/lib/validation/auth";
 
 type LoginState = {
@@ -34,6 +35,20 @@ export async function loginAction(
   if (!parsed.success) {
     return {
       error: parsed.error.issues[0]?.message ?? "Please check your input.",
+    };
+  }
+
+  try {
+    await assertRateLimit({
+      bucket: "auth.login",
+      key: parsed.data.email.toLowerCase(),
+      limit: 5,
+      windowMs: 60_000,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Too many sign-in attempts.",
     };
   }
 

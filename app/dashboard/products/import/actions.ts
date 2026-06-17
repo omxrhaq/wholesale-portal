@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 
 import { requireCompanyContext } from "@/lib/companies/context";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import { importProducts } from "@/lib/services/import-service";
 
 type ProductImportActionResult = {
@@ -32,6 +33,14 @@ export async function importProductsAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+
+    await assertRateLimit({
+      bucket: "products.import",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
+
     const summary = await importProducts(context, payload);
 
     revalidatePath("/dashboard");

@@ -1,10 +1,11 @@
 "use server";
 
-import { headers } from "next/headers";
-
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getPasswordCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
+import { assertRateLimit } from "@/lib/security/rate-limit";
+import { buildPublicUrl } from "@/lib/security/public-origin";
+import { safeUserFacingErrorMessage } from "@/lib/security/safe-errors";
 import { passwordResetRequestSchema } from "@/lib/validation/auth";
 
 type ForgotPasswordState = {
@@ -29,19 +30,33 @@ export async function requestPasswordResetAction(
     };
   }
 
+  try {
+    await assertRateLimit({
+      bucket: "auth.password-reset",
+      key: parsed.data.email.toLowerCase(),
+      limit: 3,
+      windowMs: 60_000,
+    });
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error ? error.message : "Too many password reset attempts.",
+    };
+  }
+
   const supabase = await createSupabaseServerClient();
   const redirectUrl = await buildResetPasswordUrl(parsed.data.loginType);
 
   const { error } = await supabase.auth.resetPasswordForEmail(
     parsed.data.email,
     {
-      redirectTo: redirectUrl.toString(),
+      redirectTo: redirectUrl,
     },
   );
 
   if (error) {
     return {
-      error: error.message,
+      error: safeUserFacingErrorMessage(error, copy.failed),
     };
   }
 
@@ -50,25 +65,6 @@ export async function requestPasswordResetAction(
   };
 }
 
-async function getRequestOrigin() {
-  const headerStore = await headers();
-  const explicitOrigin = headerStore.get("origin");
-
-  if (explicitOrigin) {
-    return explicitOrigin;
-  }
-
-  const host = headerStore.get("host") ?? "localhost:3000";
-  const forwardedProto = headerStore.get("x-forwarded-proto") ?? "http";
-
-  return `${forwardedProto}://${host}`;
-}
-
 async function buildResetPasswordUrl(loginType: "wholesaler" | "buyer") {
-  const origin = await getRequestOrigin();
-  const redirectUrl = new URL("/reset-password", origin);
-
-  redirectUrl.searchParams.set("type", loginType);
-
-  return redirectUrl.toString();
+  return buildPublicUrl("/reset-password", { type: loginType });
 }

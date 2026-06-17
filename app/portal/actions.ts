@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireAuthUser } from "@/lib/auth/session";
 import { requireCompanyContext } from "@/lib/companies/context";
+import { assertRateLimit } from "@/lib/security/rate-limit";
 import {
   buildPortalReorderDraft,
   createPortalOrder,
@@ -38,6 +39,14 @@ export async function placePortalOrderAction(
       "wholesaler_staff",
     ]);
     const authUser = await requireAuthUser();
+
+    await assertRateLimit({
+      bucket: "portal.checkout",
+      key: authUser.id,
+      limit: 20,
+      windowMs: 60_000,
+    });
+
     const parsed = portalOrderSchema.safeParse(payload);
 
     if (!parsed.success) {
@@ -75,6 +84,14 @@ export async function buildPortalReorderDraftAction(
       "wholesaler_staff",
     ]);
     const authUser = await requireAuthUser();
+
+    await assertRateLimit({
+      bucket: "portal.reorder",
+      key: authUser.id,
+      limit: 30,
+      windowMs: 60_000,
+    });
+
     const draft = await buildPortalReorderDraft(context, authUser.id, orderId);
 
     return {

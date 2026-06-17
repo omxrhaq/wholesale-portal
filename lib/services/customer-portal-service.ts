@@ -1,9 +1,9 @@
-import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { db } from "@/lib/db";
 import { companyUsers, customers, profiles } from "@/lib/db/schema";
+import { buildPublicUrl } from "@/lib/security/public-origin";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/services/activity-log-service";
@@ -228,15 +228,5 @@ async function ensureBuyerAccess({
 }
 
 async function buildBuyerPasswordSetupUrl() {
-  const headerStore = await headers();
-  const explicitOrigin = headerStore.get("origin");
-
-  const origin =
-    explicitOrigin ??
-    `${headerStore.get("x-forwarded-proto") ?? "http"}://${headerStore.get("host") ?? "localhost:3000"}`;
-
-  const redirectUrl = new URL("/reset-password", origin);
-  redirectUrl.searchParams.set("type", "buyer");
-
-  return redirectUrl.toString();
+  return buildPublicUrl("/reset-password", { type: "buyer" });
 }

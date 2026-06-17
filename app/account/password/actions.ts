@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAuthUser } from "@/lib/auth/session";
 import { getPasswordCopy } from "@/lib/i18n-copy";
 import { getUserLocale } from "@/lib/i18n";
+import { assertRateLimit } from "@/lib/security/rate-limit";
+import { safeUserFacingErrorMessage } from "@/lib/security/safe-errors";
 import { passwordChangeSchema } from "@/lib/validation/auth";
 
 type PasswordUpdateState = {
@@ -38,6 +40,13 @@ export async function changePasswordAction(
     };
   }
 
+  await assertRateLimit({
+    bucket: "auth.password-change",
+    key: user.id,
+    limit: 5,
+    windowMs: 60_000,
+  });
+
   const supabase = await createSupabaseServerClient();
   const { data: signInData, error: signInError } =
     await supabase.auth.signInWithPassword({
@@ -57,7 +66,7 @@ export async function changePasswordAction(
 
   if (error) {
     return {
-      error: error.message,
+      error: safeUserFacingErrorMessage(error, copy.failed),
     };
   }
 

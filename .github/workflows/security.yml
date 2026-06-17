@@ -1,0 +1,156 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: "17 3 * * 1"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fail on critical npm vulnerabilities
+        run: npm run security:audit
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+
+  security-tests:
+    name: Security tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_SSL: disable
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap Supabase-compatible auth stubs
+        run: |
+          node --input-type=module -e "
+            import postgres from 'postgres';
+
+            const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+
+            await sql.unsafe('create schema if not exists auth');
+            await sql.unsafe('create extension if not exists pgcrypto');
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if; end \\\$\\\$\");
+            await sql.unsafe('create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text, created_at timestamptz default now())');
+            await sql.unsafe('create or replace function auth.uid() returns uuid language sql stable as \\\$\\\$ select null::uuid \\\$\\\$');
+
+            await sql.end();
+          "
+
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Run security test suite with coverage threshold
+        run: npm run test:security:ci
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            reports/security-tests.xml
+            coverage/coverage-summary.json
+          if-no-files-found: ignore

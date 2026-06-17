@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -9,6 +8,9 @@ import { requireCompanyContext } from "@/lib/companies/context";
 import { db } from "@/lib/db";
 import { companyUsers, customers, profiles } from "@/lib/db/schema";
 import { hasSupabaseServiceRoleKey } from "@/lib/env";
+import { assertRateLimit } from "@/lib/security/rate-limit";
+import { buildPublicUrl } from "@/lib/security/public-origin";
+import { safeUserFacingErrorMessage } from "@/lib/security/safe-errors";
 import {
   createCustomer,
   getCustomerById,
@@ -129,6 +131,13 @@ export async function setupCustomerPortalLoginAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    await assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
+
     const parsed = customerPortalLoginSchema.parse(values);
     const customer = await getCustomerById(context.company.id, customerId);
 
@@ -230,6 +239,12 @@ export async function sendCustomerPortalSetupEmailAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    await assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
 
     if (!hasSupabaseServiceRoleKey()) {
       return {
@@ -264,6 +279,12 @@ export async function generateCustomerPortalSetupLinkAction(
       "wholesaler_owner",
       "wholesaler_staff",
     ]);
+    await assertRateLimit({
+      bucket: "customer.portal-setup",
+      key: context.userId,
+      limit: 10,
+      windowMs: 60_000,
+    });
 
     if (!hasSupabaseServiceRoleKey()) {
       return {
@@ -336,7 +357,6 @@ export async function generateCustomerPortalSetupLinkAction(
       return {
         success: true,
         portalSetupLink: buildPortalAuthCallbackLink({
-          origin: await getRequestOrigin(),
           tokenHash: data.properties.hashed_token,
           type: data.properties.verification_type,
           redirectTo: data.properties.redirect_to,
@@ -386,7 +406,6 @@ export async function generateCustomerPortalSetupLinkAction(
     return {
       success: true,
       portalSetupLink: buildPortalAuthCallbackLink({
-        origin: await getRequestOrigin(),
         tokenHash: data.properties.hashed_token,
         type: data.properties.verification_type,
         redirectTo: data.properties.redirect_to,
@@ -401,11 +420,7 @@ export async function generateCustomerPortalSetupLinkAction(
 }
 
 function getActionErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Something went wrong. Please try again.";
+  return safeUserFacingErrorMessage(error, "Could not generate the portal setup link.");
 }
 
 async function getAuthUserById(
@@ -518,44 +533,21 @@ async function ensureBuyerAccess(
 }
 
 async function buildBuyerPasswordSetupUrl() {
-  const origin = await getRequestOrigin();
-  const redirectUrl = new URL("/reset-password", origin);
-
-  redirectUrl.searchParams.set("type", "buyer");
-
-  return redirectUrl.toString();
-}
-
-async function getRequestOrigin() {
-  const headerStore = await headers();
-  const explicitOrigin = headerStore.get("origin");
-
-  if (explicitOrigin) {
-    return explicitOrigin;
-  }
-
-  const host = headerStore.get("host") ?? "localhost:3000";
-  const forwardedProto = headerStore.get("x-forwarded-proto") ?? "http";
-
-  return `${forwardedProto}://${host}`;
+  return buildPublicUrl("/reset-password", { type: "buyer" });
 }
 
 function buildPortalAuthCallbackLink({
-  origin,
   tokenHash,
   type,
   redirectTo,
 }: {
-  origin: string;
   tokenHash: string;
   type: string;
   redirectTo: string;
 }) {
-  const callbackUrl = new URL("/auth/callback", origin);
-
-  callbackUrl.searchParams.set("token_hash", tokenHash);
-  callbackUrl.searchParams.set("type", type);
-  callbackUrl.searchParams.set("redirect_to", redirectTo);
-
-  return callbackUrl.toString();
+  return buildPublicUrl("/auth/callback", {
+    token_hash: tokenHash,
+    type,
+    redirect_to: redirectTo,
+  });
 }

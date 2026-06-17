@@ -41,7 +41,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 
 ## Stack
 
-- Next.js: `next@16.2.3`
+- Next.js: `next@16.2.9`
 - React: `react@19.2.4`
 - TypeScript: `typescript@^5`
 - Tailwind CSS: `tailwindcss@^4`
@@ -146,6 +146,8 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run hooks:install` - `node scripts/install-git-hooks.mjs`
 - `npm run lint` - `eslint`
 - `npm run prepare` - `node scripts/install-git-hooks.mjs`
+- `npm run security:audit` - `node scripts/security-audit.mjs`
+- `npm run security:gate` - `npm run security:audit && npm run test:security:ci`
 - `npm run start` - `next start`
 - `npm run test:integration:db` - `vitest run tests/integration/order-stock.test.ts`
 - `npm run test:regression` - `node scripts/test-regression.mjs baseline`
@@ -159,6 +161,9 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run test:regression:order` - `node scripts/test-regression.mjs baseline order`
 - `npm run test:regression:products` - `node scripts/test-regression.mjs baseline products`
 - `npm run test:regression:ui` - `node scripts/test-regression.mjs baseline ui`
+- `npm run test:security` - `vitest run tests/security`
+- `npm run test:security:ci` - `vitest run tests/security --coverage --reporter=default --reporter=junit --outputFile.junit=reports/security-tests.xml`
+- `npm run test:security:coverage` - `vitest run tests/security --coverage`
 - `npm run test:unit` - `vitest run lib/order-intake.test.ts lib/orders.test.ts`
 
 ## Local Development

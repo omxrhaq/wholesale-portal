@@ -7,6 +7,7 @@ import {
   createProductCategory,
   updateProductCategory,
 } from "@/lib/services/product-service";
+import { safeUserFacingErrorMessage } from "@/lib/security/safe-errors";
 import {
   productCategorySchema,
   type ProductCategoryInput,
@@ -76,9 +77,7 @@ function getActionErrorMessage(error: unknown) {
     if (error.message.includes("product_categories_company_normalized_idx")) {
       return "This category already exists within your company.";
     }
-
-    return error.message;
   }
 
-  return "Something went wrong. Please try again.";
+  return safeUserFacingErrorMessage(error);
 }
