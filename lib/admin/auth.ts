@@ -66,7 +66,7 @@ export async function requireSuperAdmin() {
     redirect("/login?next=/admin");
   }
 
-  assertRateLimit({
+  await assertRateLimit({
     bucket: "admin.access",
     key: user.id,
     limit: 60,

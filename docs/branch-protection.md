@@ -56,5 +56,12 @@ After configuring branch protection:
 - Confirm direct push to `main` is rejected for normal users.
 - Confirm CodeQL/code scanning alerts are visible in `Security -> Code scanning`.
 - Confirm Dependabot alerts are visible in `Security -> Dependabot`.
+- Compare required checks with `.github/BRANCH_PROTECTION_REQUIRED.md`.
+- In `Settings -> Rules -> Rulesets` or `Settings -> Branches`, confirm bypass permissions are disabled or limited to repository administrators only.
+- In a test PR, confirm `Security / Dependency audit` fails when `npm run security:audit` fails locally.
 
 Record the active settings in the repository operations notes whenever they change.
+
+## What Repository Code Cannot Enforce
+
+The repository can define workflows, required-check names and documentation, but it cannot by itself enable GitHub branch protection, block administrator bypass, or enable code scanning merge protection. Those settings must be configured by a repository administrator in GitHub.

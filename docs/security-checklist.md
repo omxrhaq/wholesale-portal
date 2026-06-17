@@ -58,8 +58,10 @@ If the answer is "not applicable", state why. Do not leave a blank answer.
 ### Rate Limiting
 
 - Add rate-limit tests when adding login, password reset, invite/setup link generation, import, checkout or AI endpoints.
-- The current runtime helper is in-memory for development/test or explicit `RATE_LIMIT_BACKEND=memory`.
-- Production remains a no-op until a distributed backend is added. Do not claim production-grade abuse protection until Redis/Upstash or an equivalent shared backend is wired in.
+- Development and test use the in-memory limiter.
+- Production requires an Upstash-compatible Redis backend with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- `RATE_LIMIT_BACKEND=memory` is not allowed in production.
+- If the distributed backend is missing or unavailable, production fails closed instead of silently allowing traffic.
 
 ### AI Access
 

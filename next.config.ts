@@ -1,41 +1,51 @@
 import type { NextConfig } from "next";
 
-export const contentSecurityPolicy = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join("; ");
+export function getContentSecurityPolicy(nodeEnv = process.env.NODE_ENV) {
+  const isProduction = nodeEnv === "production";
 
-export const baseSecurityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: contentSecurityPolicy,
-  },
-  {
-    key: "X-Frame-Options",
-    value: "DENY",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
-  {
-    key: "Permissions-Policy",
-    value:
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
-  },
-];
+  return [
+    "default-src 'self'",
+    isProduction
+      ? "script-src 'self'"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+export function getBaseSecurityHeaders(nodeEnv = process.env.NODE_ENV) {
+  return [
+    {
+      key: "Content-Security-Policy",
+      value: getContentSecurityPolicy(nodeEnv),
+    },
+    {
+      key: "X-Frame-Options",
+      value: "DENY",
+    },
+    {
+      key: "X-Content-Type-Options",
+      value: "nosniff",
+    },
+    {
+      key: "Referrer-Policy",
+      value: "strict-origin-when-cross-origin",
+    },
+    {
+      key: "Permissions-Policy",
+      value:
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+    },
+  ];
+}
+
+export const baseSecurityHeaders = getBaseSecurityHeaders();
 
 export const productionSecurityHeaders = [
   {
@@ -44,12 +54,14 @@ export const productionSecurityHeaders = [
   },
 ];
 
-export function getSecurityHeaders() {
-  if (process.env.NODE_ENV === "production") {
-    return [...baseSecurityHeaders, ...productionSecurityHeaders];
+export function getSecurityHeaders(nodeEnv = process.env.NODE_ENV) {
+  const headers = getBaseSecurityHeaders(nodeEnv);
+
+  if (nodeEnv === "production") {
+    return [...headers, ...productionSecurityHeaders];
   }
 
-  return baseSecurityHeaders;
+  return headers;
 }
 
 const nextConfig: NextConfig = {

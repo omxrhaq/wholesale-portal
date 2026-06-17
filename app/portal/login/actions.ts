@@ -40,7 +40,7 @@ export async function portalLoginAction(
   }
 
   try {
-    assertRateLimit({
+    await assertRateLimit({
       bucket: "auth.portal-login",
       key: parsed.data.email.toLowerCase(),
       limit: 5,

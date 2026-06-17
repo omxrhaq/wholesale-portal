@@ -34,7 +34,7 @@ export async function importProductsAction(
       "wholesaler_staff",
     ]);
 
-    assertRateLimit({
+    await assertRateLimit({
       bucket: "products.import",
       key: context.userId,
       limit: 10,

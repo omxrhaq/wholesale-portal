@@ -40,7 +40,7 @@ export async function placePortalOrderAction(
     ]);
     const authUser = await requireAuthUser();
 
-    assertRateLimit({
+    await assertRateLimit({
       bucket: "portal.checkout",
       key: authUser.id,
       limit: 20,
@@ -85,7 +85,7 @@ export async function buildPortalReorderDraftAction(
     ]);
     const authUser = await requireAuthUser();
 
-    assertRateLimit({
+    await assertRateLimit({
       bucket: "portal.reorder",
       key: authUser.id,
       limit: 30,

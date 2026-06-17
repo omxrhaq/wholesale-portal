@@ -8,6 +8,7 @@ import {
   deactivateProduct,
   updateProduct,
 } from "@/lib/services/product-service";
+import { safeUserFacingErrorMessage } from "@/lib/security/safe-errors";
 import { productSchema, type ProductInput } from "@/lib/validation/product";
 
 type ProductActionResult = {
@@ -79,9 +80,7 @@ function getActionErrorMessage(error: unknown) {
     if (error.message.includes("products_company_sku_idx")) {
       return "This SKU already exists within your company.";
     }
-
-    return error.message;
   }
 
-  return "Something went wrong. Please try again.";
+  return safeUserFacingErrorMessage(error);
 }

@@ -5,6 +5,7 @@ import { readRepoFile } from "./security-test-utils";
 describe("branch protection documentation", () => {
   it("documents required GitHub branch protection checks", () => {
     const docs = readRepoFile("docs/branch-protection.md");
+    const requiredContract = readRepoFile(".github/BRANCH_PROTECTION_REQUIRED.md");
 
     for (const requiredCheck of [
       "CI / Lint, unit, and docs",
@@ -17,6 +18,7 @@ describe("branch protection documentation", () => {
       "Security / Security tests and coverage",
     ]) {
       expect(docs).toContain(requiredCheck);
+      expect(requiredContract).toContain(requiredCheck);
     }
   });
 
@@ -27,5 +29,6 @@ describe("branch protection documentation", () => {
     expect(docs).toContain("Block direct pushes to `main`");
     expect(docs).toContain("Require branches to be up to date before merging");
     expect(docs).toContain("Verification Checklist");
+    expect(docs).toContain("What Repository Code Cannot Enforce");
   });
 });

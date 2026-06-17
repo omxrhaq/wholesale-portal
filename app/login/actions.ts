@@ -39,7 +39,7 @@ export async function loginAction(
   }
 
   try {
-    assertRateLimit({
+    await assertRateLimit({
       bucket: "auth.login",
       key: parsed.data.email.toLowerCase(),
       limit: 5,
