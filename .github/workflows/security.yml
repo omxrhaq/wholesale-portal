@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
@@ -86,8 +86,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_SSL: disable
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
       SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
@@ -104,6 +120,27 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Bootstrap Supabase-compatible auth stubs
+        run: |
+          node --input-type=module -e "
+            import postgres from 'postgres';
+
+            const sql = postgres(process.env.DATABASE_URL, { prepare: false });
+
+            await sql.unsafe('create schema if not exists auth');
+            await sql.unsafe('create extension if not exists pgcrypto');
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated; end if; end \\\$\\\$\");
+            await sql.unsafe(\"do \\\$\\\$ begin if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role; end if; end \\\$\\\$\");
+            await sql.unsafe('create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text, created_at timestamptz default now())');
+            await sql.unsafe('create or replace function auth.uid() returns uuid language sql stable as \\\$\\\$ select null::uuid \\\$\\\$');
+
+            await sql.end();
+          "
+
+      - name: Apply database migrations
+        run: npm run db:migrate
 
       - name: Run security test suite with coverage threshold
         run: npm run test:security:ci

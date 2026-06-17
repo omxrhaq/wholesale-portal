@@ -20,6 +20,14 @@ id = "database-url-with-credentials"
 description = "Database URL containing credentials"
 regex = '''(?i)(postgres|postgresql|mysql|mariadb)://[^:\s'"]+:[^@\s'"]+@[^/\s'"]+'''
 keywords = ["postgres", "postgresql", "mysql", "database_url"]
+[rules.allowlist]
+description = "Allow the exact local CI Postgres URL placeholder only in the security workflow."
+paths = [
+  '''^\.github/workflows/security\.yml$''',
+]
+regexes = [
+  '''postgresql://postgres:postgres@localhost:5432/postgres''',
+]
 
 [[rules]]
 id = "openai-or-api-style-key"
@@ -44,7 +52,6 @@ description = "Allow documented CI placeholders and public examples."
 regexes = [
   '''ci-placeholder''',
   '''https://example\.supabase\.co''',
-  '''postgresql://postgres:postgres@localhost:5432/postgres''',
   '''DATABASE_URL="postgresql://\.\.\."''',
   '''SUPABASE_SERVICE_ROLE_KEY="\.\.\."''',
 ]

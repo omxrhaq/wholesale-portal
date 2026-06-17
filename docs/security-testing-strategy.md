@@ -8,6 +8,7 @@ The security workflow must fail when:
 
 - secrets are detected
 - critical npm vulnerabilities are detected
+- high npm vulnerabilities are detected unless explicitly risk-accepted in `docs/dependency-security-policy.md`
 - CodeQL reports security findings according to GitHub's code scanning rules
 - security tests fail
 - security coverage falls below the configured threshold
@@ -43,7 +44,7 @@ As more runtime security tests are added, expand coverage include patterns and t
 ## Dependency and Secret Controls
 
 - Dependabot tracks npm and GitHub Actions updates through `.github/dependabot.yml`.
-- `npm run security:audit` fails on critical vulnerabilities through `npm audit --audit-level=critical`.
+- `npm run security:audit` fails on critical vulnerabilities and on unaccepted high vulnerabilities through `scripts/security-audit.mjs`.
 - Gitleaks runs in GitHub Actions with `.gitleaks.toml`.
 - CodeQL runs JavaScript/TypeScript analysis with security and quality queries.
 
@@ -60,7 +61,7 @@ Security headers are configured in `next.config.ts`:
 - `Permissions-Policy`
 - `Strict-Transport-Security` in production builds only
 
-The CSP is intentionally compatible with the current Next.js app and should be tightened when nonce-based rendering is introduced.
+The CSP keeps `unsafe-inline` for styles because the current toast component uses inline CSS variables, but production no longer allows `unsafe-eval`. The remaining script hardening work is nonce-based CSP support; track that as a follow-up before expanding client-side script injection points.
 
 ## Rate Limiting
 
@@ -75,7 +76,13 @@ Sensitive flows are identified as rate-limit buckets:
 - reorder
 - admin access
 
-The current helper provides in-memory throttling for development/test or explicit `RATE_LIMIT_BACKEND=memory`. Production defaults to no-op because in-memory counters are not reliable in serverless or multi-instance deployments. Add a distributed backend before claiming production-grade rate limiting.
+The helper provides in-memory throttling for development/test only. Production fails closed unless an Upstash-compatible Redis backend is configured with `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. `RATE_LIMIT_BACKEND=memory` is rejected in production because in-memory counters are not reliable in serverless or multi-instance deployments.
+
+## Gitleaks Troubleshooting
+
+- The local CI Postgres URL in `.github/workflows/security.yml` is intentionally allowlisted only for the `database-url-with-credentials` rule, and only for that workflow file. This keeps the CI placeholder from failing secret scanning without weakening real database URL detection elsewhere.
+- Real database URLs still fail Gitleaks because the allowlist matches only the exact placeholder string in the exact workflow path.
+- To run the scanner locally, use the same repository config that CI uses: `gitleaks detect --config .gitleaks.toml --source .`.
 
 ## Permanent Regression Rule
 

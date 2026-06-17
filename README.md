@@ -41,7 +41,7 @@ B2B wholesale ordering portal for small and midsize wholesalers. The MVP focuses
 
 ## Stack
 
-- Next.js: `next@16.2.3`
+- Next.js: `next@16.2.9`
 - React: `react@19.2.4`
 - TypeScript: `typescript@^5`
 - Tailwind CSS: `tailwindcss@^4`
@@ -146,7 +146,7 @@ SUPABASE_SERVICE_ROLE_KEY="..."
 - `npm run hooks:install` - `node scripts/install-git-hooks.mjs`
 - `npm run lint` - `eslint`
 - `npm run prepare` - `node scripts/install-git-hooks.mjs`
-- `npm run security:audit` - `npm audit --audit-level=critical`
+- `npm run security:audit` - `node scripts/security-audit.mjs`
 - `npm run security:gate` - `npm run security:audit && npm run test:security:ci`
 - `npm run start` - `next start`
 - `npm run test:integration:db` - `vitest run tests/integration/order-stock.test.ts`
